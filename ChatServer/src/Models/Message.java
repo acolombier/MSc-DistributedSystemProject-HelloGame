@@ -2,6 +2,8 @@ package Models;
 
 import java.io.Serializable;
 
+import Models.Message.Type;
+
 public class Message implements Serializable {
 	private Client sender;
 	private Client receiver;
@@ -60,5 +62,11 @@ public class Message implements Serializable {
 		REGULAR,
 		CLIENT_CONNECTION_OR_LEAVING,
 		ERROR;
+	}
+
+
+
+	public static Message buildSystemMessage(String string, Type type) {
+		return new Message(null, null, string, type);
 	}
 }

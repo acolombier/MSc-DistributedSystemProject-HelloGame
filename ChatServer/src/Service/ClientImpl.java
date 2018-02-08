@@ -8,10 +8,19 @@ import Models.Message;
 public class ClientImpl implements Client {
 	
 	private ClientInterface mInterface;
+	private String mName;
 
-	public ClientImpl(ClientInterface mInterface) {
-		super();
+	public ClientImpl(String name) {
+		this.mName = name;
+	}
+	
+	public void setInterface(ClientInterface mInterface) {
 		this.mInterface = mInterface;
+	}
+
+	@Override
+	public String getName() {
+		return mName;
 	}
 
 	@Override

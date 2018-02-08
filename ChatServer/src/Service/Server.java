@@ -8,6 +8,6 @@ import Models.MessageBundle;
 public interface Server extends Remote {
 	boolean register(Client c) throws RemoteException;
 	void unregister(Client c) throws RemoteException;
-	ArrayList<Message> pull() throws RemoteException;
+	Message[] pull() throws RemoteException;
 	Message push(MessageBundle m) throws RemoteException;
 }
