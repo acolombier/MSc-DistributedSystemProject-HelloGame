@@ -18,6 +18,7 @@ Without `--gui`, the client will run in CLI mode.
 Without `ip_addr`, the client will connect the localhost. 
 
 In both mode, you can send private messages using this syntax: `@<username> message`
+The default message without using `@username` will send it to all connected clients
 You can also get a list of available command by typing `/help`
 
 
