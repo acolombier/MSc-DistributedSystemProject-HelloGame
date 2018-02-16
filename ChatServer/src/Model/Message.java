@@ -62,7 +62,7 @@ public class Message implements Serializable {
 	public enum Type {
 		REGULAR,
 		CLIENT_CONNECTION_OR_LEAVING,
-		ERROR;
+		ERROR, DISCONNECT;
 	}
 
 	public static Message buildSystemMessage(String string, Type type) {
