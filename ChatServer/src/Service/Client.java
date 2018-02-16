@@ -2,7 +2,7 @@ package Service;
 
 import java.rmi.*;
 
-import Models.Message;
+import Model.Message;
 
 public interface Client extends Remote {
 	void send(Message m) throws RemoteException;

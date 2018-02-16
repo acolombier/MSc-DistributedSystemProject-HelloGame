@@ -1,5 +1,6 @@
 package Service;
 
+import java.awt.List;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -18,14 +19,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.tools.FileObject;
 
-import Models.Message;
-import Models.MessageBundle;
+import Model.Message;
+import Model.MessageBundle;
 
 public class ServerImpl implements Server {
 	
 	public final int MAX_CACHE_SIZE = 100;
 	
-	private HashMap<String, Models.Client> mClients;
+	private HashMap<String, Model.Client> mClients;
 	private ArrayList<Message> mMessages;
 	private ObjectOutputStream mMessagesSaver;
 
@@ -52,12 +53,16 @@ public class ServerImpl implements Server {
 
 	public void privateMessage(Message m){
 		try {
-			saveMessage(m);
+			saveMessage(m);ArrayList<String> disconnectedClient = new ArrayList<>();
+			
 			if (mClients.containsKey(m.getReceiver().getName()))
 				try {
 					mClients.get(m.getReceiver().getName()).getInterface().send(m);
+					if (m.getSender() != null)
+						m.getSender().getInterface().send(m);
 				} catch (RemoteException e) {
 					try {
+						m.getSender().getInterface().send(new Message(null, m.getSender(), m.getReceiver()+ " is not connected on the server", Message.Type.ERROR));
 						this.unregister(m.getReceiver().getName());
 					} catch (RemoteException e1) {
 						e1.printStackTrace();
@@ -71,21 +76,26 @@ public class ServerImpl implements Server {
 	public void broadcast(Message m){
 		try {
 			saveMessage(m);
-			for (Iterator<Entry<String, Models.Client>> iterator = mClients.entrySet().iterator(); iterator.hasNext(); ) {
-				Entry<String, Models.Client> c = iterator.next();
-				if (m.getSender() != null && m.getSender().getName().equals(c.getKey()))
-					continue;
+			
+			ArrayList<String> disconnectedClient = new ArrayList<>();
+			
+			for (Iterator<Entry<String, Model.Client>> iterator = mClients.entrySet().iterator(); iterator.hasNext(); ) {
+				Entry<String, Model.Client> c = iterator.next();
+				
 				try {
 					System.out.println("Sendind to "+c.getValue().toString());
 					c.getValue().getInterface().send(m);
 				} catch (RemoteException e) {
-					try {
-						this.unregister(c.getKey());
-					} catch (RemoteException e1) {
-						e1.printStackTrace();
-					}
+					disconnectedClient.add(c.getKey());
 				}
 			}
+			for (String c: disconnectedClient)
+				try {
+					this.unregister(c);
+				} catch (RemoteException e1) {
+					System.err.println("Could not kick the user "+c);
+					e1.printStackTrace();
+				}
 		} catch (IOException e2) {
 			e2.printStackTrace();
 		}
@@ -96,7 +106,7 @@ public class ServerImpl implements Server {
 		if (mClients.containsKey(c.getName()))
 			return false;
 		
-		mClients.put(c.getName(), new Models.Client(c.getName(), c));
+		mClients.put(c.getName(), new Model.Client(c.getName(), c));
 		Message m = Message.buildSystemMessage(c.getName() + " has joined the chat", Message.Type.CLIENT_CONNECTION_OR_LEAVING);
 		this.broadcast(m);
 		return true;
@@ -126,7 +136,7 @@ public class ServerImpl implements Server {
 			if (mClients.containsKey(m.getReceiver()))
 				r = new Message(mClients.get(m.getSender().getName()), mClients.get(m.getReceiver()), m.getMessage());
 			else 
-				r = new Message(null, m.getSender(), m.getSender()+ " is not connected on the server", Message.Type.ERROR);
+				r = new Message(null, m.getSender(), m.getReceiver()+ " is not connected on the server", Message.Type.ERROR);
 			
 			this.privateMessage(r);
 			return null;
@@ -151,7 +161,7 @@ public class ServerImpl implements Server {
 				body = "";
 				if (payload.length == 2){
 					int c = 0, n = Integer.valueOf(payload[1]);
-					n = n > 0 ? n : mMessages.size();
+					n = n > 0  && n <= mMessages.size() ? n : mMessages.size();
 	
 					for (int i = mMessages.size(); i >= 0 && n > 0; i--){
 						if (mMessages.get(i).getReceiver() == null || mMessages.get(i).getReceiver().equals(m.getSender())){

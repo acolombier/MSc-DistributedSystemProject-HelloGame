@@ -3,7 +3,7 @@ package Service;
 import java.rmi.RemoteException;
 
 import Controller.ClientInterface;
-import Models.Message;
+import Model.Message;
 
 public class ClientImpl implements Client {
 	
@@ -12,6 +12,11 @@ public class ClientImpl implements Client {
 
 	public ClientImpl(String name) {
 		this.mName = name;
+	}
+	
+	public ClientImpl(String name, ClientInterface c) {
+		this.mName = name;
+		this.mInterface = c;
 	}
 	
 	public void setInterface(ClientInterface mInterface) {

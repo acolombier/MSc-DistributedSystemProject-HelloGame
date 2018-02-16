@@ -2,8 +2,9 @@ package Service;
 
 import java.rmi.*;
 import java.util.ArrayList;
-import Models.Message;
-import Models.MessageBundle;
+
+import Model.Message;
+import Model.MessageBundle;
 
 public interface Server extends Remote {
 	boolean register(Client c) throws RemoteException;
