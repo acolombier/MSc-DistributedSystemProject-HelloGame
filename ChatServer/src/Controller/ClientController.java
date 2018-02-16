@@ -8,6 +8,7 @@ public class ClientController implements ClientInterface {
 	@Override
 	public void display_message(Message m) {
 		// TODO Auto-generated method stub
+		this.shiftMessages();
 		ChatServerUI.getInstance().getMsgSender()[ChatServerUI.getInstance().getNumOfShownMsg() - 1].setText(m.getSender().getName());
 		ChatServerUI.getInstance().getMsg()[ChatServerUI.getInstance().getNumOfShownMsg() - 1].setText(m.getMessage());
 	}
