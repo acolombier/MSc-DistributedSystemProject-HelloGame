@@ -53,7 +53,7 @@ public class ServerImpl implements Server {
 
 	public void privateMessage(Message m){
 		try {
-			saveMessage(m);ArrayList<String> disconnectedClient = new ArrayList<>();
+			saveMessage(m);
 			
 			if (mClients.containsKey(m.getReceiver().getName()))
 				try {
@@ -163,14 +163,14 @@ public class ServerImpl implements Server {
 					int c = 0, n = Integer.valueOf(payload[1]);
 					n = n > 0  && n <= mMessages.size() ? n : mMessages.size();
 	
-					for (int i = mMessages.size(); i >= 0 && n > 0; i--){
-						if (mMessages.get(i).getReceiver() == null || mMessages.get(i).getReceiver().equals(m.getSender())){
+					for (int i = mMessages.size() - 1; i >= 0 && n > 0; i--){
+						if (mMessages.get(i).getSender().equals(m.getSender()) || mMessages.get(i).getReceiver() == null || mMessages.get(i).getReceiver().equals(m.getSender())){
 							body = "\t"+mMessages.get(i).toString()+"\n" + body;
 							n--; c++;
 						}
 					}
 				
-					body = " "+Integer.valueOf(c)+" messages displayed";
+					body += " "+Integer.valueOf(c)+" messages displayed";
 				} else
 					body = "\nUsage: /history <nb message>\n";
 				this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
@@ -214,6 +214,14 @@ public class ServerImpl implements Server {
 		public String getDescription() {
 			return this.desc;
 		}
+	}
+
+	public HashMap<String, Model.Client> getClients() {
+		return mClients;
+	}
+
+	public ArrayList<Message> getMessages() {
+		return mMessages;
 	}
 	
 }
