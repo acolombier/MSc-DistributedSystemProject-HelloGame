@@ -1,6 +1,8 @@
 package Models;
 
 import java.io.Serializable;
+import java.util.Date;
+import java.util.GregorianCalendar;
 
 public class Message implements Serializable {
 	private Client sender;
@@ -37,7 +39,8 @@ public class Message implements Serializable {
 	
 	@Override
 	public String toString() {
-		return "*"+(sender != null ? sender.getName() : "system")+"*"+(receiver != null ? "@"+receiver.getName():"")+": "+message;
+		Date date = new Date(time);
+		return "["+date.toString()+"] *"+(sender != null ? sender.getName() : "system")+"*"+(receiver != null ? "@"+receiver.getName():"")+": "+message;
 	}
 
 	public Client getSender() {

@@ -12,6 +12,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Date;
 import java.util.Scanner;
 
 import javax.swing.JFrame;
@@ -47,10 +48,11 @@ public class RunClient {
 			client.setInterface(new ClientInterface(){
 				@Override
 				public void display_message(Message m) {
+					Date date = new Date(m.getTime());
 					if (m.getSender() == null)
-						System.out.println("***"+m.getMessage()+"***");	
+						System.out.println("[+"+date.toString()+"] ***"+m.getMessage()+"***");	
 					else if (m.getReceiver() != null)
-						System.out.println("[Private] *"+m.getSender().toString()+"*: "+m.getMessage());	
+						System.out.println("[+"+date.toString()+"][Private] *"+m.getSender().toString()+"*: "+m.getMessage());	
 					else
 						System.out.println(m.toString());					
 				}
@@ -65,7 +67,7 @@ public class RunClient {
 			System.out.println("Client already registered; try again!");
 		}
 
-		System.out.println("Start Chat | press '/quit' to quit");
+		System.out.println("Start Chat | Type '/help' to get some help");
 		
 		while (true) {
 			String message = scanner.nextLine();

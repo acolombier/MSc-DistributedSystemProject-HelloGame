@@ -26,23 +26,19 @@ public class ServerImpl implements Server {
 	public final int MAX_CACHE_SIZE = 100;
 	
 	private HashMap<String, Models.Client> mClients;
-	private Queue<Message> mCacheMessages;
+	private ArrayList<Message> mMessages;
 	private ObjectOutputStream mMessagesSaver;
 
 	public ServerImpl(File f) throws IOException {
 		super();
 		this.mClients = new HashMap<>();
-		this.mCacheMessages = new LinkedBlockingQueue<>();
+		this.mMessages = new ArrayList<>();
 
 		ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
 
 		try {
-			while (true){
-				mCacheMessages.add((Message) ois.readObject());
-				
-				if (mCacheMessages.size() > MAX_CACHE_SIZE)
-						mCacheMessages.poll();
-			}
+			while (true)
+				mMessages.add((Message) ois.readObject());
 		} catch (Exception e) {}
 		
 		mMessagesSaver = new ObjectOutputStream(new FileOutputStream(f));
@@ -50,10 +46,7 @@ public class ServerImpl implements Server {
 	}
 	
 	private void saveMessage(Message m) throws IOException{
-		mCacheMessages.add(m);
-		
-		if (mCacheMessages.size() > MAX_CACHE_SIZE)
-				mCacheMessages.poll();
+		mMessages.add(m);
 		mMessagesSaver.writeObject(m);
 	}
 
@@ -120,7 +113,7 @@ public class ServerImpl implements Server {
 
 	@Override
 	public Message[] pull() throws RemoteException {
-		return mCacheMessages.toArray(new Message[mCacheMessages.size()]);
+		return mMessages.toArray(new Message[mMessages.size()]);
 	}
 
 	@Override
@@ -140,14 +133,36 @@ public class ServerImpl implements Server {
 		}
 		else if (m.getMessage().startsWith("/")){
 			String[] payload = m.getMessage().substring(1).split(" ", 2);
+			String body;
 			switch (Command.valueOf(payload[0].toUpperCase())){
 			case HELP:
-				this.privateMessage(new Message(null, m.getSender(), "/list\tGet the list of connected user\n/help\tDisplay the current help message", Message.Type.REGULAR));
+				body = "\n";
+				for (Command c: Command.values())
+					body += "/"+c.name().toLowerCase()+c.getArgs()+"\t"+c.getDescription()+"\n";
+				this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
 				break;
 			case LIST:
-				String body = " "+Integer.valueOf(mClients.size())+" connected client(s): \n";
+				body = " "+Integer.valueOf(mClients.size())+" connected client(s): \n";
 				for (String nickname: mClients.keySet())
 					body += nickname+"\n";
+				this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
+				break;
+			case HISTORY:
+				body = "";
+				if (payload.length == 2){
+					int c = 0, n = Integer.valueOf(payload[1]);
+					n = n > 0 ? n : mMessages.size();
+	
+					for (int i = mMessages.size(); i >= 0 && n > 0; i--){
+						if (mMessages.get(i).getReceiver() == null || mMessages.get(i).getReceiver().equals(m.getSender())){
+							body = "\t"+mMessages.get(i).toString()+"\n" + body;
+							n--; c++;
+						}
+					}
+				
+					body = " "+Integer.valueOf(c)+" messages displayed";
+				} else
+					body = "\nUsage: /history <nb message>\n";
 				this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
 				break;
 			default:
@@ -165,7 +180,30 @@ public class ServerImpl implements Server {
 	}
 	
 	public enum Command {
-		LIST, HELP;
+		LIST("Get the list of connected user"),
+		HISTORY("Retrieve the last <n> messages from the history. 0 to get all of them", "<n>"), 
+		HELP("Display the current help message"),
+		QUIT("Leave the chat");
+
+		private String desc;
+		private String args;
+
+		Command(String d){
+			this.desc = d;	
+			this.args = "";
+		}
+		Command(String d, String a){
+			this.desc = d;	
+			this.args = a;		
+		}
+		
+		public String getArgs() {
+			return " "+args;
+		}
+		
+		public String getDescription() {
+			return this.desc;
+		}
 	}
 	
 }
