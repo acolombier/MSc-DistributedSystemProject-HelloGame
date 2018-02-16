@@ -17,11 +17,12 @@ import java.util.Scanner;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
+import Controller.ClientInterface;
+import Models.Message;
 import Models.MessageBundle;
 import Service.Client;
 import Service.ClientImpl;
 import Service.Server;
-import UI.ChatServerUI;
 
 public class RunClient {
 	
@@ -32,35 +33,54 @@ public class RunClient {
 	public static void  main(String [] args) throws RemoteException, NotBoundException {
 		
 		Scanner scanner = new Scanner(System.in);
-		String username = null;
-
+		
 		registry = LocateRegistry.getRegistry("127.0.0.1");
 		server = (Server) registry.lookup("Server");
+		ClientImpl client;
+		
+		Models.Client clientModel;
 		
 		while (true) {
 			System.out.println("Enter Username: ");			
-			username = scanner.nextLine();
-			ClientImpl client = new ClientImpl(username);
+			final String username = scanner.nextLine();
+			client = new ClientImpl(username);
+			client.setInterface(new ClientInterface(){
+				@Override
+				public void display_message(Message m) {
+					if (m.getSender() == null)
+						System.out.println("***"+m.getMessage()+"***");	
+					else if (m.getReceiver() != null)
+						System.out.println("[Private] *"+m.getSender().toString()+"*: "+m.getMessage());	
+					else
+						System.out.println(m.toString());					
+				}
+				
+			});
 			client_stub = (Client) UnicastRemoteObject.exportObject(client, 0);
 			
 			if (server.register(client_stub) ) {
+				clientModel = new Models.Client(username);
 				break;
 			}
 			System.out.println("Client already registered; try again!");
 		}
+
+		System.out.println("Start Chat | press '/quit' to quit");
 		
-		Models.Client clientModel = new Models.Client(username);
-		System.out.println("Start Chat | press q to quit");
-		String userMessage = null;
-		
-		while (! (userMessage == "q")) {
-			userMessage = scanner.nextLine();
-			System.out.println("Enter receiver name: ");
-			String receiverName = scanner.nextLine();
-			MessageBundle userMessageBundle = new MessageBundle(clientModel, userMessage, receiverName);
+		while (true) {
+			String message = scanner.nextLine();
+			if (message.equals("/quit"))
+				break;
+			
+			MessageBundle userMessageBundle;
+			
+			if (message.startsWith("@"))
+				userMessageBundle = new MessageBundle(clientModel, message.split(" ", 2)[1], message.split(" ")[0].substring(1));
+			else				
+				userMessageBundle = new MessageBundle(clientModel, message);
 			server.push(userMessageBundle);
 		}
-		server.unregister(client_stub);
+		server.unregister(client_stub.getName());
 	}
 	
 	RunClient() {
@@ -87,7 +107,7 @@ public class RunClient {
 			JLabel lblNewLabel = new JLabel("User Name");
 			this.add(lblNewLabel);
 			
-			TextField textField = new TextField(10);
+			final TextField textField = new TextField(10);
 			textField.setSize(10, 20);
 			this.add(textField);
 			
@@ -128,7 +148,7 @@ public class RunClient {
 	            @Override
 	            public void windowClosing(WindowEvent we) {
 	            	try {
-						server.unregister(client_stub);
+						server.unregister(client_stub.getName());
 					} catch (RemoteException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();

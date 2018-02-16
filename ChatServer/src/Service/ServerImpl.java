@@ -10,8 +10,11 @@ import java.io.ObjectOutputStream;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.tools.FileObject;
 
@@ -22,13 +25,14 @@ public class ServerImpl implements Server {
 	
 	public final int MAX_CACHE_SIZE = 100;
 	
-	private HashMap<String, Client> mClients;
+	private HashMap<String, Models.Client> mClients;
 	private Queue<Message> mCacheMessages;
 	private ObjectOutputStream mMessagesSaver;
 
 	public ServerImpl(File f) throws IOException {
 		super();
 		this.mClients = new HashMap<>();
+		this.mCacheMessages = new LinkedBlockingQueue<>();
 
 		ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
 
@@ -58,16 +62,15 @@ public class ServerImpl implements Server {
 			saveMessage(m);
 			if (mClients.containsKey(m.getReceiver().getName()))
 				try {
-					mClients.get(m.getReceiver().getName()).send(m);
+					mClients.get(m.getReceiver().getName()).getInterface().send(m);
 				} catch (RemoteException e) {
 					try {
-						this.unregister(mClients.get(m.getReceiver().getName()));
+						this.unregister(m.getReceiver().getName());
 					} catch (RemoteException e1) {
 						e1.printStackTrace();
 					}
 				}
 		} catch (IOException e2) {
-			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
 	}
@@ -75,19 +78,22 @@ public class ServerImpl implements Server {
 	public void broadcast(Message m){
 		try {
 			saveMessage(m);
-			for (Map.Entry<String, Client> c: mClients.entrySet())
-				if (!m.getSender().equals(c.getKey()))
+			for (Iterator<Entry<String, Models.Client>> iterator = mClients.entrySet().iterator(); iterator.hasNext(); ) {
+				Entry<String, Models.Client> c = iterator.next();
+				if (m.getSender() != null && m.getSender().getName().equals(c.getKey()))
+					continue;
+				try {
+					System.out.println("Sendind to "+c.getValue().toString());
+					c.getValue().getInterface().send(m);
+				} catch (RemoteException e) {
 					try {
-						c.getValue().send(m);
-					} catch (RemoteException e) {
-						try {
-							this.unregister(c.getValue());
-						} catch (RemoteException e1) {
-							e1.printStackTrace();
-						}
+						this.unregister(c.getKey());
+					} catch (RemoteException e1) {
+						e1.printStackTrace();
 					}
+				}
+			}
 		} catch (IOException e2) {
-			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
 	}
@@ -97,31 +103,69 @@ public class ServerImpl implements Server {
 		if (mClients.containsKey(c.getName()))
 			return false;
 		
-		mClients.put(c.getName(), c);
-		this.broadcast(Message.buildSystemMessage(c.getName() + " has joined the chat", Message.Type.CLIENT_CONNECTION_OR_LEAVING));
+		mClients.put(c.getName(), new Models.Client(c.getName(), c));
+		Message m = Message.buildSystemMessage(c.getName() + " has joined the chat", Message.Type.CLIENT_CONNECTION_OR_LEAVING);
+		this.broadcast(m);
 		return true;
 	}
 
 	@Override
-	public void unregister(Client c) throws RemoteException {
-		if (!mClients.containsKey(c.getName()))
+	public void unregister(String c) throws RemoteException {
+		if (!mClients.containsKey(c))
 			return;
-		mClients.remove(c.getName());
-		this.broadcast(Message.buildSystemMessage(c.getName() + " has left the chat", Message.Type.CLIENT_CONNECTION_OR_LEAVING));
+		mClients.remove(c);
+		this.broadcast(Message.buildSystemMessage(c + " has left the chat", Message.Type.CLIENT_CONNECTION_OR_LEAVING));
 		
 	}
 
 	@Override
 	public Message[] pull() throws RemoteException {
-		// TODO Auto-generated method stub
 		return mCacheMessages.toArray(new Message[mCacheMessages.size()]);
 	}
 
 	@Override
 	public Message push(MessageBundle m) throws RemoteException {
-		// TODO Auto-generated method stub
+		if (mClients.containsKey(m.getSender().getName()) && mClients.get(m.getSender().getName()) == m.getSender())		
+			return null;
 		
-		return null;
+		Message r;
+		if (m.getReceiver() != null && m.getReceiver().length() > 0){
+			if (mClients.containsKey(m.getReceiver()))
+				r = new Message(mClients.get(m.getSender().getName()), mClients.get(m.getReceiver()), m.getMessage());
+			else 
+				r = new Message(null, m.getSender(), m.getSender()+ " is not connected on the server", Message.Type.ERROR);
+			
+			this.privateMessage(r);
+			return null;
+		}
+		else if (m.getMessage().startsWith("/")){
+			String[] payload = m.getMessage().substring(1).split(" ", 2);
+			switch (Command.valueOf(payload[0].toUpperCase())){
+			case HELP:
+				this.privateMessage(new Message(null, m.getSender(), "/list\tGet the list of connected user\n/help\tDisplay the current help message", Message.Type.REGULAR));
+				break;
+			case LIST:
+				String body = " "+Integer.valueOf(mClients.size())+" connected client(s): \n";
+				for (String nickname: mClients.keySet())
+					body += nickname+"\n";
+				this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
+				break;
+			default:
+				break;			
+			}
+			return null;
+		}
+		else
+			r = new Message(m.getSender(), null, m.getMessage());
+		
+		System.out.println(r.toString());
+		
+		this.broadcast(r);
+		return r;
+	}
+	
+	public enum Command {
+		LIST, HELP;
 	}
 	
 }

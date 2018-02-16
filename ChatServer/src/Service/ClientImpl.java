@@ -19,7 +19,7 @@ public class ClientImpl implements Client {
 	}
 
 	@Override
-	public String getName() {
+	public String getName() throws RemoteException {
 		return mName;
 	}
 

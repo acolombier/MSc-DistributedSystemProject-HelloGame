@@ -6,5 +6,5 @@ import Models.Message;
 
 public interface Client extends Remote {
 	void send(Message m) throws RemoteException;
-	String getName();
+	String getName() throws RemoteException;
 }

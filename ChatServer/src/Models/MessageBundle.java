@@ -1,6 +1,8 @@
 package Models;
 
-public class MessageBundle {
+import java.io.Serializable;
+
+public class MessageBundle implements Serializable {
 	private Client mSender;
 	private String mReceiver;
 	private String mMessage;
