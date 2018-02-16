@@ -1,6 +1,10 @@
 package Controller;
 
+import java.rmi.RemoteException;
+
+import Model.Client;
 import Model.Message;
+import Service.Server;
 import UI.ChatServerUI;
 
 public class ClientUI implements ClientInterface {
@@ -22,6 +26,24 @@ public class ClientUI implements ClientInterface {
 			ChatServerUI.getInstance().getMsgSender()[i].setText(ChatServerUI.getInstance().getMsgSender()[i+i].getText());
 			ChatServerUI.getInstance().getMsg()[i].setText(ChatServerUI.getInstance().getMsg()[i+i].getText());
 		}
+	}
+
+	@Override
+	public void run(Server server, Client client) throws RemoteException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String requestNickname() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void error(String s) {
+		// TODO Auto-generated method stub
+		
 	}
 
 
