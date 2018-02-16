@@ -1,6 +1,7 @@
 package Service;
 
 import java.awt.List;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -30,7 +31,7 @@ public class ServerImpl implements Server {
 	private ArrayList<Message> mMessages;
 	private ObjectOutputStream mMessagesSaver;
 
-	public ServerImpl(File f) throws IOException {
+	public ServerImpl(File f) throws IOException, ClassNotFoundException {
 		super();
 		this.mClients = new HashMap<>();
 		this.mMessages = new ArrayList<>();
@@ -40,9 +41,13 @@ public class ServerImpl implements Server {
 		try {
 			while (true)
 				mMessages.add((Message) ois.readObject());
-		} catch (Exception e) {}
+		} catch (EOFException e) {
+		}
 		
 		mMessagesSaver = new ObjectOutputStream(new FileOutputStream(f));
+		
+		for (Message m: mMessages)
+			mMessagesSaver.writeObject(m);
 		
 	}
 	
@@ -144,39 +149,43 @@ public class ServerImpl implements Server {
 		else if (m.getMessage().startsWith("/")){
 			String[] payload = m.getMessage().substring(1).split(" ", 2);
 			String body;
-			switch (Command.valueOf(payload[0].toUpperCase())){
-			case HELP:
-				body = "\n";
-				for (Command c: Command.values())
-					body += "/"+c.name().toLowerCase()+c.getArgs()+"\t"+c.getDescription()+"\n";
-				this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
-				break;
-			case LIST:
-				body = " "+Integer.valueOf(mClients.size())+" connected client(s): \n";
-				for (String nickname: mClients.keySet())
-					body += nickname+"\n";
-				this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
-				break;
-			case HISTORY:
-				body = "";
-				if (payload.length == 2){
-					int c = 0, n = Integer.valueOf(payload[1]);
-					n = n > 0  && n <= mMessages.size() ? n : mMessages.size();
-	
-					for (int i = mMessages.size() - 1; i >= 0 && n > 0; i--){
-						if (mMessages.get(i).getSender().equals(m.getSender()) || mMessages.get(i).getReceiver() == null || mMessages.get(i).getReceiver().equals(m.getSender())){
-							body = "\t"+mMessages.get(i).toString()+"\n" + body;
-							n--; c++;
+			try {
+				switch (Command.valueOf(payload[0].toUpperCase())){
+				case HELP:
+					body = "\n";
+					for (Command c: Command.values())
+						body += "/"+c.name().toLowerCase()+c.getArgs()+"\t"+c.getDescription()+"\n";
+					this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
+					break;
+				case LIST:
+					body = " "+Integer.valueOf(mClients.size())+" connected client(s): \n";
+					for (String nickname: mClients.keySet())
+						body += nickname+"\n";
+					this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
+					break;
+				case HISTORY:
+					body = "";
+					if (payload.length == 2){
+						int c = 0, n = Integer.valueOf(payload[1]);
+						n = n > 0  && n <= mMessages.size() ? n : mMessages.size();
+		
+						for (int i = mMessages.size() - 1; i >= 0 && n > 0; i--){
+							if ((mMessages.get(i).getSender() != null && mMessages.get(i).getSender().equals(m.getSender())) || mMessages.get(i).getReceiver() == null || mMessages.get(i).getReceiver().equals(m.getSender())){
+								body = "\n\t"+mMessages.get(i).toString()+ body;
+								n--; c++;
+							}
 						}
-					}
-				
-					body += " "+Integer.valueOf(c)+" messages displayed";
-				} else
-					body = "\nUsage: /history <nb message>\n";
-				this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
-				break;
-			default:
-				break;			
+					
+						body += "\n "+Integer.valueOf(c)+" messages displayed";
+					} else
+						body = "\nUsage: /history <nb message>\n";
+					this.privateMessage(new Message(null, m.getSender(), body, Message.Type.REGULAR));
+					break;
+				default:
+					break;			
+				}
+			} catch (IllegalArgumentException e){
+				this.privateMessage(new Message(null, m.getSender(), payload[0]+" command does not exist", Message.Type.REGULAR));
 			}
 			return null;
 		}

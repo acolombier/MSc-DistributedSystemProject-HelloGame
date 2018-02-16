@@ -41,38 +41,42 @@ public class RunServer {
 				String[] payload = scanner.nextLine().substring(1).split(" ", 2);
 				String body = "";
 				
-				switch (ServerImpl.Command.valueOf(payload[0].toUpperCase())){
-				case HELP:
-					for (ServerImpl.Command c: ServerImpl.Command.values())
-						body += "/"+c.name().toLowerCase()+c.getArgs()+"\t"+c.getDescription()+"\n";
-					break;
-				case LIST:
-					body = Integer.valueOf(server.getClients().size())+" connected client(s): \n";
-					for (String nickname: server.getClients().keySet())
-						body += nickname+"\n";
-					break;
-				case HISTORY:
-					if (payload.length == 2){
-						int c = 0, n = Integer.valueOf(payload[1]);
-						n = n > 0  && n <= server.getMessages().size() ? n : server.getMessages().size();
-		
-						for (int i = server.getMessages().size() - 1; i >= 0 && n > 0; i--){
-							body = "\t"+server.getMessages().get(i).toString()+"\n" + body;
-							n--; c++;
-						}
-					
-						body += " "+Integer.valueOf(c)+" messages displayed";
-					} else
-						body = "\nUsage: /history <nb message>\n";
-					break;
-				case QUIT:
-					server_runing = false;
-					for (Entry<String, Model.Client> e: server.getClients().entrySet())
-						e.getValue().getInterface().send(Message.buildSystemMessage("Server is exiting", Message.Type.DISCONNECT));
-					System.out.println("Stopping the server...");
-					break;
-				default:
-					break;			
+				try {
+					switch (ServerImpl.Command.valueOf(payload[0].toUpperCase())){
+					case HELP:
+						for (ServerImpl.Command c: ServerImpl.Command.values())
+							body += "/"+c.name().toLowerCase()+c.getArgs()+"\t"+c.getDescription()+"\n";
+						break;
+					case LIST:
+						body = Integer.valueOf(server.getClients().size())+" connected client(s): \n";
+						for (String nickname: server.getClients().keySet())
+							body += nickname+"\n";
+						break;
+					case HISTORY:
+						if (payload.length == 2){
+							int c = 0, n = Integer.valueOf(payload[1]);
+							n = n > 0  && n <= server.getMessages().size() ? n : server.getMessages().size();
+			
+							for (int i = server.getMessages().size() - 1; i >= 0 && n > 0; i--){
+								body = "\t"+server.getMessages().get(i).toString()+"\n" + body;
+								n--; c++;
+							}
+						
+							body += " "+Integer.valueOf(c)+" messages displayed";
+						} else
+							body = "\nUsage: /history <nb message>\n";
+						break;
+					case QUIT:
+						server_runing = false;
+						for (Entry<String, Model.Client> e: server.getClients().entrySet())
+							e.getValue().getInterface().send(Message.buildSystemMessage("Server is exiting", Message.Type.DISCONNECT));
+						System.out.println("Stopping the server...");
+						break;
+					default:
+						break;			
+					}
+				} catch (IllegalArgumentException e){
+					System.err.println(payload[0]+" command does not exist");
 				}
 				System.out.println(body);
 			}
