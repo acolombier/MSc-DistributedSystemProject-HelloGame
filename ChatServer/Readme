@@ -1,0 +1,26 @@
+# Chat App
+
+In order to build everything, you can use the command `make`.
+
+*RMI must be working with CLASSPATH pointing to <ChatAppRep>/bin*
+
+## Server
+
+To launch the server, go to the directory "bin", and type `java -cp . RunServer`
+
+The server can run basics command. A list of them can be gather using the command `/help`.
+
+## Client
+
+To launch the client, go to the directory "bin", and type `java -cp . RunClient [--gui] [ip_addr]`
+
+Without `--gui`, the client will run in CLI mode. 
+Without `ip_addr`, the client will connect the localhost. 
+
+In both mode, you can send private messages using this syntax: `@<username> message`
+You can also get a list of available command by typing `/help`
+
+
+## History feature
+
+We decided to log all the message, including the command output, in order to be able to track any possible leak or hack that a rogue client could create.
