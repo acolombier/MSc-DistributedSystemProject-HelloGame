@@ -1,23 +1,17 @@
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.Scanner;
 
 import Model.Message;
-import Service.Client;
 import Service.Server;
 import Service.ServerImpl;
-import Service.ServerImpl.Command;
 
 public class RunServer {
-	private ArrayList<Client> connectedClients;
-	
 	public static void  main(String [] args) {
 		try {
 			File logFile = new File("message.log");
@@ -80,6 +74,7 @@ public class RunServer {
 				}
 				System.out.println(body);
 			}
+			scanner.close();
 			registry.unbind("Server");
 			UnicastRemoteObject.unexportObject(server, false);
 			

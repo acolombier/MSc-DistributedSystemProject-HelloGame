@@ -1,28 +1,12 @@
-import java.awt.Button;
-import java.awt.CardLayout;
-import java.awt.FlowLayout;
-import java.awt.Label;
-import java.awt.TextField;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Date;
-import java.util.Scanner;
-
-import javax.swing.JFrame;
-import javax.swing.JLabel;
 
 import Controller.ClientCLI;
 import Controller.ClientInterface;
 import Controller.ClientUI;
-import Model.Message;
-import Model.MessageBundle;
 import Service.Client;
 import Service.ClientImpl;
 import Service.Server;
@@ -49,12 +33,13 @@ public class RunClient {
 		
 		ClientInterface controler = is_using_gui ? new ClientUI() : new ClientCLI();
 		
-		Model.Client client;
+		Model.Client client = null;
+		ClientImpl c;
 		
 		while (true) {		
 			String username = controler.requestNickname();
 			
-			ClientImpl c = new ClientImpl(username, controler);
+			c = new ClientImpl(username, controler);
 			client_stub = (Client) UnicastRemoteObject.exportObject(c, 0);
 			
 			if (server.register(client_stub)) {
@@ -63,7 +48,9 @@ public class RunClient {
 			}
 			controler.error("Client already registered");
 		}
+		
 		controler.run(server, client);
 		server.unregister(client_stub.getName());
+		UnicastRemoteObject.unexportObject(c, false);
 	}
 }

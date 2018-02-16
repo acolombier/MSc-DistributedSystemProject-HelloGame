@@ -1,15 +1,13 @@
 package UI;
 
-import java.awt.EventQueue;
-
-import javax.swing.JFrame;
 import java.awt.BorderLayout;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.BoxLayout;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JButton;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
 
 public class ChatAppUI {
 

@@ -53,7 +53,8 @@ public class ClientCLI implements ClientInterface {
 			else				
 				userMessageBundle = new MessageBundle(client, message);
 			server.push(userMessageBundle);
-		}		
+		}
+		scanner.close();
 	}
 
 	@Override

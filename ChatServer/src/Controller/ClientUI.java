@@ -4,17 +4,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.nio.channels.ShutdownChannelGroupException;
 import java.rmi.RemoteException;
 import java.util.Date;
 
-import javax.swing.JFrame;
 import javax.swing.JOptionPane;
-
-import java.util.concurrent.locks.Condition;
 
 import Model.Client;
 import Model.Message;
@@ -112,7 +107,6 @@ public class ClientUI implements ClientInterface, ActionListener {
 			try {
 				runObject.wait();
 			} catch (InterruptedException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 		}
