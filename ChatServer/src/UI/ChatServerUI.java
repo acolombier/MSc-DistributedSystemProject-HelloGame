@@ -32,23 +32,15 @@ public class ChatServerUI{
 	private JList clientsList;
 	private final int numOfShownMsg = 10;
 	
-	private static ChatServerUI instance = null;
 	
 	/**
 	 * Create the application.
 	 */
-	private ChatServerUI() {
+	public ChatServerUI() {
 		initialize();
 		loginFrame.setVisible(true);
 	}
 	
-	public static ChatServerUI getInstance(){
-	    if(instance==null){
-	       instance = new ChatServerUI();
-	      }
-	      return instance;
-	  }
-
 	/**
 	 * Initialize the contents of the frame.
 	 */
