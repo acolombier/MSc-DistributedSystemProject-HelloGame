@@ -170,7 +170,9 @@ public class ServerImpl implements Server {
 						n = n > 0  && n <= mMessages.size() ? n : mMessages.size();
 		
 						for (int i = mMessages.size() - 1; i >= 0 && n > 0; i--){
-							if ((mMessages.get(i).getSender() != null && mMessages.get(i).getSender().equals(m.getSender())) || mMessages.get(i).getReceiver() == null || mMessages.get(i).getReceiver().equals(m.getSender())){
+							if ((mMessages.get(i).getSender() != null && mMessages.get(i).getSender().getName().equals(m.getSender().getName())) || 
+									mMessages.get(i).getReceiver() == null || 
+									mMessages.get(i).getReceiver().getName().equals(m.getSender().getName())){
 								body = "\n\t"+mMessages.get(i).toString()+ body;
 								n--; c++;
 							}

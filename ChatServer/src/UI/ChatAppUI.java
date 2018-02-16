@@ -18,23 +18,7 @@ public class ChatAppUI {
 	private JTextArea chatBox;
 	private JButton sendButton;
 	private JScrollPane mScroll;
-
-	/**
-	 * Launch the application.
-	 */
-	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					ChatAppUI window = new ChatAppUI();
-					window.frmChatApp.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}
-
+	
 	/**
 	 * Create the application.
 	 */
@@ -47,6 +31,7 @@ public class ChatAppUI {
 	 */
 	private void initialize() {
 		frmChatApp = new JFrame();
+		frmChatApp.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frmChatApp.setTitle("Chat App");
 		frmChatApp.setBounds(100, 100, 450, 300);
 		frmChatApp.getContentPane().setLayout(new BorderLayout(0, 0));

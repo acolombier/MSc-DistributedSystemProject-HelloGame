@@ -77,8 +77,6 @@ public class ClientUI implements ClientInterface, ActionListener {
 				ui.getMessageField().setEnabled(false);
 			}
 		}
-		else if (m.getReceiver() != null)
-			format = "[+"+date.toString()+"][Private] *"+m.getSender().toString()+"*: "+m.getMessage();	
 		else
 			format = m.toString();	
 		ui.getChatBox().setText(ui.getChatBox().getText()+format+"\n");
@@ -108,6 +106,8 @@ public class ClientUI implements ClientInterface, ActionListener {
 
 	    });
 		
+		ui.getMessageField().requestFocus();
+		
 		synchronized(runObject) {
 			try {
 				runObject.wait();
@@ -135,10 +135,16 @@ public class ClientUI implements ClientInterface, ActionListener {
 		ui.getMessageField().requestFocus();
 		
 		MessageBundle userMessageBundle;
+
+		if (message.equals("/quit"))
+			ui.getMainFrame().dispatchEvent(new WindowEvent(ui.getMainFrame(), WindowEvent.WINDOW_CLOSING));
+			
 		if (message.startsWith("@")){
 			String[] payload = message.split(" ", 2);
-			if (payload.length != 2)
+			if (payload.length != 2){
 				JOptionPane.showMessageDialog(ui.getMainFrame(), "Please type a message", "Error", JOptionPane.ERROR_MESSAGE);
+				return;
+			}
 			userMessageBundle = new MessageBundle(mClient, payload[1], payload[0].substring(1));
 		}
 		else				
