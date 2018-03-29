@@ -1,16 +1,40 @@
 import pika
-import model
-from serializer import *
+from .model import *
+from .serializer import *
 from multiprocessing import Queue
 
+from socket import gaierror
+
+from PyQt5.QtCore import QThread, pyqtSignal
 
 
-
+class GameStartException(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)    
+    
+    
 class GameCore(QThread):
     eventReceived = pyqtSignal(object)
+    statusChanged = pyqtSignal(str)
+    errorEncounted = pyqtSignal(str)
+    finished = pyqtSignal()
     
-    def __init__(self, server, nickname, listener):
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=server))
+    def __init__(self, nickname, server):
+        super().__init__()
+        
+        self.server, self.player = server, Player(nickname)
+        
+        print ("Initialising a game on %s with the nickname '%s'" % (server, nickname))
+        
+    def init(self):
+        
+        self.statusChanged.emit("Connection to server...")
+        try:
+            self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=self.server))
+        except gaierror as e:
+            self.errorEncounted.emit(str(e))
+            return False
+
 
         self.channel = self.connection.channel()
         self.replies = Queue()
@@ -20,7 +44,7 @@ class GameCore(QThread):
         
         self.channel.exchange_declare(exchange='broadcast',
                                       exchange_type='fanout')
-        bc_queue = channel.queue_declare(exclusive=True)
+        bc_queue = self.channel.queue_declare(exclusive=True)
         broadcast_queue_name = bc_queue.method.queue
 
         self.channel.queue_bind(exchange='broadcast',
@@ -32,10 +56,17 @@ class GameCore(QThread):
                                    
         ### Main Broadcast Channel
         self.channel.basic_consume(self.on_broadcast,
-                                   queue=queue_name)
-                                   
-        self.player = Player(nickname)
-        self.listener = listener
+                                   queue=broadcast_queue_name)
+                                
+        
+        print("Connection request")
+        self.statusChanged.emit("Accessing to the game...")
+        self.player.info = self._request(JoinRequest(self.player))
+        self.errorEncounted.emit("Connected")
+        self.eventReceived.emit(Event(GAME_READY, self.player))
+        return True
+        
+        
 
     def on_response(self, ch, method, props, body):
         data = json_decode(body)
@@ -52,7 +83,7 @@ class GameCore(QThread):
 
     def _request(self, payload):
         # ToDo: some basic cs
-        assert self.replies.count() == 0
+        assert self.replies.empty()
         self.channel.basic_publish(exchange='direct',
                                    routing_key='main_queue' if not self.player.is_on_board() else "node_area_%d" % self.player.area,
                                    properties=pika.BasicProperties(
@@ -63,5 +94,7 @@ class GameCore(QThread):
         return self.replie.get()
         
     def run(self):
-        self.channel.start_consuming()
+        if self.init():
+            self.channel.start_consuming()
+        self.finished.emit()
 

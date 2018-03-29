@@ -16,8 +16,6 @@ class Area(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         
-        print("painting")
-        
         p.setPen(Qt.red)
         for i in range(0, self.nrow+1):
             p.drawLine((self.width() / self.nrow) * i, 0, (self.width() / self.nrow) * i, self.height())   
@@ -100,5 +98,8 @@ class GameStartDialog(QDialog):
         self.submited.emit(self.ui.nicknameValue.text(), self.ui.serverValue.text())
         
     def error(self, msg):
-        self.ui.errorMsgText.setText("<b style='red'>%s</b>" % msg)
+        self.ui.errorMsgText.setText("<b style='color: red;'>%s</b>" % msg)
+        
+    def status(self, msg):
+        self.ui.errorMsgText.setText("<i style='color: grey;'>%s</i>" % msg)
     

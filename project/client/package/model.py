@@ -20,7 +20,7 @@ class Player(Main):
         self.position = None
         
     def is_on_board(self):
-        return self.area not None and self.position not None
+        return self.area is not None and self.position is not None
  
         
 class Request(Main):
@@ -55,6 +55,8 @@ class Event(Main):
     PLAYER_MOVE = 0x0
     PLAYER_SAYS = 0x1
     PLAYER_JOIN = 0x2
+    
+    GAME_READY = 0x3
     
     def __init__(self, _type, *args):
         self.type = _type

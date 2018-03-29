@@ -1,4 +1,5 @@
 from package import ui
+from package.core import *
 from PyQt5.QtWidgets import QApplication
 import sys
 
@@ -19,14 +20,27 @@ class Controller(QApplication):
         
     def launchGame(self, nickname, server):
         try:
-            self.core = GameCore(server, nickname, listener=self.gm)
+            self.core = GameCore(server, nickname)
+            self.core.statusChanged.connect(self.startdialog.status)
+            self.core.errorEncounted.connect(self.startdialog.error)
+            self.core.eventReceived.connect(self.onEvent)
             
+            self.corethread = QThread()
+            self.core.moveToThread(self.corethread)
+            self.corethread.finished.connect(self.core.deleteLater)
+            self.corethread.started.connect(self.core.run)
+            self.core.finished.connect(self.corethread.quit)
+            self.corethread.start()
+            
+        except GameStartException as e:
+            self.startdialog.error(str(e))
+            
+    def onEvent(self, event):
+        if event._type == Event.GAME_READY:                        
             self.startdialog.hide()
             
             self.gm.show()
-        except GameStartException as e:
-            self.startdialog.error(str(e))
-        
+                    
         
 c = Controller(sys.argv)
 c.run()

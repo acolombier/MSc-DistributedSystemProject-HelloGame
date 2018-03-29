@@ -1,5 +1,11 @@
 import pika
+from package.area import Area
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+        
+if __name__ == "__main__":
 
-channel = connection.channel()
+    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    channel = connection.channel()
+    
+    a = [Area(i, channel) for i in range(0, 4)]
+    a[0].run()

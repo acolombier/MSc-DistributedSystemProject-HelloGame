@@ -1,6 +1,6 @@
 import pika
-import model
-from serializer import *
+from . import model
+from .serializer import *
 
 
 class Area:
@@ -9,20 +9,22 @@ class Area:
         
         self.players = {}
         
+        self.channel = channel
+        
         channel.queue_declare(queue='main_queue')
         channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(on_request, queue='main_queue')
+        channel.basic_consume(self.on_request, queue='main_queue')
     
         ### Declaring Broadcast
         channel.exchange_declare(exchange='broadcast',
                                  exchange_type='fanout')                                 
-        self.broadcast_channel.queue_bind(exchange='broadcast',
+        channel.queue_bind(exchange='broadcast',
                                           queue="main_queue")
                                  
         ### Declaring Direct
         channel.exchange_declare(exchange='direct',
                                  exchange_type='topic')
-        self.broadcast_channel.queue_bind(exchange='direct',
+        channel.queue_bind(exchange='direct',
                                           queue="main_queue",
                                           routing_key='node_area_%d.*' % self.id)
 
@@ -70,4 +72,4 @@ class Area:
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
     def run(self):
-        channel.start_consuming()
+        self.channel.start_consuming()
