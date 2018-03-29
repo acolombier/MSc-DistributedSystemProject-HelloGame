@@ -31,6 +31,7 @@ class Request(Main):
 class MoveRequest(Request):
     
     def __init__(self, player, area, x, y):
+        super().__init__()
         self.player = player
         self.destination = (area, x, y)  
         self.status = MoveRequest.PENDING
@@ -47,6 +48,7 @@ class MoveRequest(Request):
 class JoinRequest(Request):
     
     def __init__(self, player):
+        super().__init__()
         self.player = player
 
              

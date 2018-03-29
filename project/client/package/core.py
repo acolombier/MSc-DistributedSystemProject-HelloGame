@@ -61,7 +61,7 @@ class GameCore(QThread):
         
         print("Connection request")
         self.statusChanged.emit("Accessing to the game...")
-        self.player.info = self._request(JoinRequest(self.player))
+        self.player.area, self.player.position = self._request(JoinRequest(self.player))
         self.errorEncounted.emit("Connected")
         self.eventReceived.emit(Event(GAME_READY, self.player))
         return True
@@ -91,7 +91,7 @@ class GameCore(QThread):
                                          ),
                                    body=json_encode(payload))
 
-        return self.replie.get()
+        return self.replies.get()
         
     def run(self):
         if self.init():

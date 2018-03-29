@@ -25,8 +25,8 @@ class Area:
         channel.exchange_declare(exchange='direct',
                                  exchange_type='topic')
         channel.queue_bind(exchange='direct',
-                                          queue="main_queue",
-                                          routing_key='node_area_%d.*' % self.id)
+                           queue="main_queue",
+                           routing_key='node_area_%d.*' % self.id)
 
 
     def on_request(ch, method, props, body):
@@ -39,15 +39,15 @@ class Area:
                 
             if data.area() != self.id:
                 ch.basic_publish(exchange='direct',
-                         routing_key='node_area_%d.*' % data.area,
-                         properties=pika.BasicProperties(reply_to = props.reply_to),
-                         body=body)
+                                 routing_key='node_area_%d.*' % data.area,
+                                 properties=pika.BasicProperties(reply_to = props.reply_to),
+                                 body=body)
             else:
                 if data.cellid() not in self.players.values():
                     self.players[data.player] = data.cellid()
                     
                     ch.basic_publish(exchange='broadcast',
-                             body=json_encode(Event(Event.PLAYER_MOVE, data.player, data.destination)))
+                                     body=json_encode(Event(Event.PLAYER_MOVE, data.player, data.destination)))
                     # TODO: say hi if some is nearby
                 else:
                     data.status = model.MoveRequest.FAILED
@@ -66,7 +66,7 @@ class Area:
                 
             self.players[data.player] = c
             ch.basic_publish(exchange='broadcast',
-                     body=json_encode(Event(Event.PLAYER_JOIN, data.player, self.id, c)))
+                             body=json_encode(Event(Event.PLAYER_JOIN, data.player, self.id, c)))
             # TODO: say hi if some is nearby
             
             ch.basic_ack(delivery_tag = method.delivery_tag)

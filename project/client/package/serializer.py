@@ -4,7 +4,7 @@ import json
 class ComplexEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, model.Main):
-            return obj.clean().serialyze()
+            return obj.clean().serialize()
         return json.JSONEncoder.default(self, obj)
 
 
