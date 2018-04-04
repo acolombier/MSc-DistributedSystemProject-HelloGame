@@ -11,25 +11,30 @@ class Area:
         
         self.channel = channel
         
+        #~ channel.queue_declare(queue='connect')
         channel.queue_declare(queue='main_queue')
         channel.basic_qos(prefetch_count=1)
         channel.basic_consume(self.on_request, queue='main_queue')
+        #~ channel.basic_consume(self.on_request, queue='connect')
     
         ### Declaring Broadcast
         channel.exchange_declare(exchange='broadcast',
                                  exchange_type='fanout')                                 
         channel.queue_bind(exchange='broadcast',
-                                          queue="main_queue")
+                           queue="main_queue")
                                  
-        ### Declaring Direct
+        ### Declaring Direct exchange for already registered 
         channel.exchange_declare(exchange='direct',
                                  exchange_type='topic')
         channel.queue_bind(exchange='direct',
                            queue="main_queue",
                            routing_key='node_area_%d.*' % self.id)
+        channel.queue_bind(exchange='direct',
+                           queue="main_queue",
+                           routing_key='main_queue')
 
 
-    def on_request(ch, method, props, body):
+    def on_request(self, ch, method, props, body):
         data = json_decode(body)
         
         if isinstance(data, model.MoveRequest):
