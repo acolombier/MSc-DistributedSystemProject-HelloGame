@@ -1,6 +1,7 @@
 import pika
 from . import model
 from .serializer import *
+from random import randint
 
 
 class Area:
@@ -60,7 +61,7 @@ class Area:
                                      routing_key=props.reply_to,
                                      body=json_encode(data))
             ch.basic_ack(delivery_tag = method.delivery_tag)
-        elif isinstance(data, model.RegistrationRequest):
+        elif isinstance(data, model.JoinRequest):
             if len(self.players) == 16:
                 print("Error: the area is full")
                 ch.basic_nack(delivery_tag = method.delivery_tag)
@@ -69,9 +70,12 @@ class Area:
             while c in self.players.values():
                 c = randint(0, 15)
                 
+            print("Accepting new client '%s' at pos %s" % (data.player.nickname, c))
+                
             self.players[data.player] = c
-            ch.basic_publish(exchange='broadcast',
-                             body=json_encode(Event(Event.PLAYER_JOIN, data.player, self.id, c)))
+            ch.basic_publish(exchange='',
+                             routing_key=props.reply_to,
+                             body=json_encode(model.Event(model.Event.PLAYER_JOIN, data.player, self.id, c)))
             # TODO: say hi if some is nearby
             
             ch.basic_ack(delivery_tag = method.delivery_tag)

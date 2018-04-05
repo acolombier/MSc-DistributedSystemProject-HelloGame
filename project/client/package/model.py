@@ -14,7 +14,7 @@ class Main:
         return self
 
 class Player(Main):
-    def __init__(self, nickname):
+    def __init__(self, nickname=None):
         self.nickname = nickname
         self.area = None
         self.position = None
@@ -47,12 +47,14 @@ class MoveRequest(Request):
             
 class JoinRequest(Request):
     
-    def __init__(self, player):
+    def __init__(self, player=None):
         super().__init__()
         self.player = player
 
              
 class Event(Main):
+    
+    UNKNOWN = 0xFFFF
     
     PLAYER_MOVE = 0x0
     PLAYER_SAYS = 0x1
@@ -60,6 +62,6 @@ class Event(Main):
     
     GAME_READY = 0x3
     
-    def __init__(self, _type, *args):
+    def __init__(self, _type=UNKNOWN, *args):
         self.type = _type
         self.args = args

@@ -15,5 +15,5 @@ def _json_load(dct):
         return o.fromDict(dct)
     return dct
 
-json_decode = lambda o: json.loads(o, object_hook=_json_load)
+json_decode = lambda o: json.loads(o.decode(), object_hook=_json_load)
 json_encode = lambda o: json.dumps(o, cls=ComplexEncoder)

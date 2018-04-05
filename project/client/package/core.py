@@ -30,7 +30,10 @@ class GameCore(QThread):
         
         self.statusChanged.emit("Connection to server...")
         try:
+            print("Connection started...")
             self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=self.server))
+            print("Connection done")
+            
         except gaierror as e:
             self.errorEncounted.emit(str(e))
             return False
@@ -70,7 +73,7 @@ class GameCore(QThread):
 
     def on_response(self, ch, method, props, body):
         data = json_decode(body)
-        self.put(data)
+        self.replies.put(data)
         ch.basic_ack(delivery_tag = method.delivery_tag)
         
     def on_broadcast(self, ch, method, props, body):
