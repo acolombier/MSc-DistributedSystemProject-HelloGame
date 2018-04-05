@@ -94,6 +94,7 @@ class GameStartDialog(QDialog):
         self.ui.ConnectButton.clicked.connect(self.submit)
         
     def submit(self):
+        print("Submiting")
         self.ui.errorMsgText.setText("Connecting...")
         self.submited.emit(self.ui.nicknameValue.text(), self.ui.serverValue.text())
         

@@ -2,6 +2,7 @@ from package import ui
 from package.core import *
 from PyQt5.QtWidgets import QApplication
 import sys
+from threading import Thread
 
 class Controller(QApplication):
 
@@ -35,8 +36,10 @@ class Controller(QApplication):
         except GameStartException as e:
             self.startdialog.error(str(e))
             
+        Thread(target=self.core.register).start()
+            
     def onEvent(self, event):
-        if event._type == Event.GAME_READY:                        
+        if event.type == model.Event.GAME_READY:                        
             self.startdialog.hide()
             
             self.gm.show()
