@@ -62,6 +62,7 @@ class Event(Main):
     
     GAME_READY = 0x3
     
-    def __init__(self, _type=UNKNOWN, *args):
+    def __init__(self, _type=UNKNOWN, **args):
         self.type = _type
-        self.args = args
+        self.__dict__.update(args)
+        self.args = list(args.values())

@@ -15,22 +15,13 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>res/favicon.jpg</normaloff>res/favicon.jpg</iconset>
+    <normaloff>../../../../../.designer/backup/res/favicon.jpg</normaloff>../../../../../.designer/backup/res/favicon.jpg</iconset>
   </property>
   <property name="windowOpacity">
    <double>1.000000000000000</double>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
+   <property name="margin">
     <number>0</number>
    </property>
    <item>
@@ -44,19 +35,19 @@
     </widget>
    </item>
    <item>
+    <widget class="QLineEdit" name="serverValue">
+     <property name="placeholderText">
+      <string>Server</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QLineEdit" name="nicknameValue">
      <property name="text">
       <string/>
      </property>
      <property name="placeholderText">
       <string>Nickname</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLineEdit" name="serverValue">
-     <property name="placeholderText">
-      <string>Server</string>
      </property>
     </widget>
    </item>

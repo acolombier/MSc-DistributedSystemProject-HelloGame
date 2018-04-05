@@ -1,17 +1,38 @@
 from PyQt5.QtWidgets import QMainWindow, QDialog, QWidget, QGridLayout, QVBoxLayout
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QSize
 from PyQt5.QtGui import QPainter, QIcon, QPixmap
+
+from threading import Event
 
 from .template.startdialog import Ui_StartDialog
 
 class Area(QWidget):
+    requestedPosition = pyqtSignal(int)
     def __init__(self, width=4, height=4, *args):
         super().__init__(*args)
         self.nrow = width
         self.ncol = height
         
-    def cellpos(self, x, y):
-        return x * (self.width() / self.width), y * (self.height() / self.ncol)
+    
+        self.setMinimumSize(40 * self.nrow, 40 * self.ncol)
+        
+    def cellpos(self, cellid):
+        x_size, y_size = self.width(), self.height()
+        x_size /= self.nrow
+        y_size /= self.ncol
+        
+        return QSize((cellid % self.nrow) * x_size, (cellid / self.nrow) * y_size)
+        
+    def mousePressEvent(self, event):
+        x_size, y_size = self.event.x(), self.event.y()
+        x_size /= self.nrow
+        y_size /= self.ncol
+        
+        if event.button() == Qt.LeftButton:
+            cell_clicked = (event.y() / y_size) + (event.x() / x_size)
+            
+            print("clicking cell %d" % cell_clicked)
+            
         
     def paintEvent(self, event):
         p = QPainter(self)
@@ -34,30 +55,23 @@ class Board(QWidget):
         self.layout().setSpacing(0)
         
         self.players = {}
+        self.area = []
         
         for w in range(0, width):
             for h  in range(0, height):
-                self.layout().addWidget(Area(**kwargs), w, h)
+                self.area.append(Area(**kwargs))
+                self.layout().addWidget(self.area[-1], w, h)
                 
-    def addplayer(self, player, area, coordinate):
-        self.players[hash(player)] = (area, coordinate)
-        player.setParent(self)
-        player.move(area.pos() + area.cellpos(*coordinate))
+    def addplayer(self, player):
+        self.players[hash(player)] = Player(self)
+        self.players[hash(player)].move(self.area[player.area].pos() + self.area[player.area].cellpos(player.position))
         
         
 class Player(QWidget):
-    def __init__(self, width=2, height=2, **kwargs):
-        super().__init__(args)
-        self.width = width
-        self.height = height
+    def __init__(self, parent = None, **kwargs):
+        super().__init__(parent)
         
-        self.setlayout(QGridLayout())
-        
-        self.players = []
-        
-        for w in range(0, width):
-            for h  in range(0, height):
-                self.layout().addWidget(Area(**kwargs))
+        self.setFixedSize(40, 40)
                 
     def paintevent(self, event):
         p = QPainter(self)
@@ -89,16 +103,22 @@ class GameStartDialog(QDialog):
         self.ui = Ui_StartDialog()
         self.ui.setupUi(self)
         
+        self.sent = Event()
+        self.sent.clear()
+        
         self.ui.nicknameValue.returnPressed.connect(self.submit)
         self.ui.serverValue.returnPressed.connect(self.submit)
         self.ui.ConnectButton.clicked.connect(self.submit)
         
     def submit(self):
-        print("Submiting")
+        if self.sent.is_set():
+            return
+        self.sent.set()
         self.ui.errorMsgText.setText("Connecting...")
         self.submited.emit(self.ui.nicknameValue.text(), self.ui.serverValue.text())
         
     def error(self, msg):
+        self.sent.clear()
         self.ui.errorMsgText.setText("<b style='color: red;'>%s</b>" % msg)
         
     def status(self, msg):

@@ -68,7 +68,7 @@ class GameCore(QThread):
         
     def register(self):
         self.statusChanged.emit("Accessing to the game...")
-        p, self.player.area, self.player.position = self._request(JoinRequest(self.player)).args
+        p, self.player.area, self.player.position = self._request(JoinRequest(self.player))
         
         assert p.nickname == self.player.nickname
         self.player = p

@@ -21,7 +21,7 @@ class Controller(QApplication):
         
     def launchGame(self, nickname, server):
         try:
-            self.core = GameCore(server, nickname)
+            self.core = GameCore(nickname, server)
             self.core.statusChanged.connect(self.startdialog.status)
             self.core.errorEncounted.connect(self.startdialog.error)
             self.core.eventReceived.connect(self.onEvent)
@@ -42,7 +42,13 @@ class Controller(QApplication):
         if event.type == model.Event.GAME_READY:                        
             self.startdialog.hide()
             
+            ## Build the board out of the sent data (nb areas, area size, players)
+            
             self.gm.show()
+        elif event.type == model.Event.PLAYER_JOIN:  
+            self.gm.board.addplayer(event.player)
+        else:
+            print("Unknown event:", event.__dict__)
                     
         
 c = Controller(sys.argv)

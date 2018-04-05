@@ -53,7 +53,7 @@ class Area:
                     self.players[data.player] = data.cellid()
                     
                     ch.basic_publish(exchange='broadcast',
-                                     body=json_encode(Event(Event.PLAYER_MOVE, data.player, data.destination)))
+                                     body=json_encode(model.Event(model.Event.PLAYER_MOVE, data.player, data.destination)))
                     # TODO: say hi if some is nearby
                 else:
                     data.status = model.MoveRequest.FAILED
@@ -73,10 +73,22 @@ class Area:
             print("Accepting new client '%s' at pos %s" % (data.player.nickname, c))
                 
             self.players[data.player] = c
+            data.player.area = self.id
+            data.player.position = c
+            
             ch.basic_publish(exchange='',
                              routing_key=props.reply_to,
-                             body=json_encode(model.Event(model.Event.PLAYER_JOIN, data.player, self.id, c)))
-            # TODO: say hi if some is nearby
+                             body=json_encode(
+                                model.Event(model.Event.PLAYER_JOIN, 
+                                            player=data.player, 
+                                            area=self.id, 
+                                            position=c)))
+            
+            ch.basic_publish(exchange='broadcast',
+                             routing_key='',
+                             body=json_encode(
+                                model.Event(model.Event.PLAYER_JOIN, 
+                                            player=data.player)))
             
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
