@@ -17,6 +17,10 @@ class Area:
         
         self.channel = channel
         self.dispatcher = disp
+
+        # TODO : I added the attribute area_dimension like this, 
+            #can you add it the the init function
+        self.area_dimension = 4
         
         channel.queue_declare(queue='main_queue')
         channel.queue_declare(queue='node_area_%d' % self.id)
@@ -48,6 +52,12 @@ class Area:
         self.player_alive_check() 
         
         print("Node %d is up" % self.id)
+
+    # TODO check this
+    def send_hello(self, player):
+        ch.basic_publish(exchange='broadcast',
+                         routing_key='',
+                         body=json_encode(model.Event(model.Event.PLAYER_SAYS, player, 'Hello')))
 
     def player_alive_check(self):
         # Make a local copy of the current state, in case of someone arrives during the cleaning routing (RuntimeError)
@@ -139,6 +149,33 @@ class Area:
                     del self.players[list(self.players.keys())[list(self.players.values()).index(data.player)]]     
             elif data.type == model.Event.PLAYER_JOIN:
                 self.dispatcher(model.Event(model.Event.GAME_INFO, players=list(self.players.values())))
-                
-            ch.basic_ack(delivery_tag = method.delivery_tag)
+            
+            # TODO check this
+            if data.type == model.Event.PLAYER_MOVE:
 
+                topology_dim = 4
+                # data.args.destination.area I don't think it works like this
+                if data.args.destination.area + topology_dim == self.id:
+                    y = self.area_dimension - 1
+                    for x in range(self.area_dimension):
+                        if  self.players((y * self.area_dimension) + x):
+                            send_hello(data.args.destination.area, player)
+                elif data.args.destination.area - topology_dim == self.id:
+                    y = 0
+                    for x in range(self.area_dimension):
+                        if  self.players((y * self.area_dimension) + x):
+                            send_hello(data.args.destination.area, player)
+                elif data.args.destination.area - 1 == self.id:
+                    x = self.area_dimension - 1
+                    for y in range(self.area_dimension):
+                        if  self.players((y * self.area_dimension) + x):
+                            send_hello(data.args.destination.area, player)
+                elif data.args.destination.area - 1 == self.id:
+                    for y in range(self.area_dimension):
+                        if  self.players((y * self.area_dimension) + x):
+                            send_hello(data.args.destination.area, player)
+
+            #TODO
+            #if data.type == model.Event.PLAYER_SAYS:
+    
+            ch.basic_ack(delivery_tag = method.delivery_tag)
