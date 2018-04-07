@@ -8,16 +8,19 @@ from threading import Timer
 from copy import copy
 
 class Area:
-    def __init__(self, _id, channel):
+    def __init__(self, _id, gameinfo, channel, disp):
         self.id = _id
         
         self.players = {}
         
+        self.gameinfo = gameinfo
+        
         self.channel = channel
+        self.dispatcher = disp
         
         channel.queue_declare(queue='main_queue')
+        channel.queue_declare(queue='node_area_%d' % self.id)
         channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(self.on_request, queue='main_queue')
     
         ### Declaring Broadcast
         channel.exchange_declare(exchange='broadcast',
@@ -29,13 +32,22 @@ class Area:
         channel.exchange_declare(exchange='direct',
                                  exchange_type='topic')
         channel.queue_bind(exchange='direct',
-                           queue="main_queue",
-                           routing_key='node_area_%d.*' % self.id)
-        channel.queue_bind(exchange='direct',
+                           routing_key='node_area_%d' % self.id,
+                           queue='node_area_%d' % self.id)
+                                 
+        ### Declaring Direct exchange for not registered 
+        channel.exchange_declare(exchange='public_direct',
+                                 exchange_type='topic')
+        channel.queue_bind(exchange='public_direct',
                            queue="main_queue",
                            routing_key='main_queue')
+                           
+        channel.basic_consume(self.on_request, queue='main_queue')        
+        channel.basic_consume(self.on_request, queue='node_area_%d' % self.id)
         
         self.player_alive_check() 
+        
+        print("Node %d is up" % self.id)
 
     def player_alive_check(self):
         # Make a local copy of the current state, in case of someone arrives during the cleaning routing (RuntimeError)
@@ -49,15 +61,16 @@ class Area:
         self.player_ka_timer.start() 
         
     def player_disconnect(self, player, r=model.Player.DISCONNECT_QUIT):        
-        del self.players[player.position]        
-        self.channel.basic_publish(exchange='broadcast',
-                         routing_key='',
-                         body=json_encode(model.Event(model.Event.QUIT, player=player, reason=r)))
+        if player.position in self.players.keys():
+            del self.players[player.position]        
+            self.dispatcher(exchange='broadcast',
+                            routing_key='',
+                            body=json_encode(model.Event(model.Event.QUIT, player=player, reason=r)))
 
     def on_request(self, ch, method, props, body):
         data = json_decode(body)
                 
-        print("On request: %s" % body)
+        print("Area %d: On request: %s" % (self.id, body))
         
         if hasattr(data, 'player') and data.player.uuid in self.players.keys():
             self.players[data.player].last_activity = time()
@@ -65,28 +78,26 @@ class Area:
         if isinstance(data, model.MoveRequest):
             # Destination is away, we forward the request
             if data.area() != self.id:
-                ch.basic_publish(exchange='direct',
-                                 routing_key='node_area_%d.*' % data.area,
-                                 properties=pika.BasicProperties(reply_to = props.reply_to),
-                                 body=body)
+                self.dispatcher(exchange='direct',
+                                routing_key='node_area_%d' % data.area(),
+                                properties=pika.BasicProperties(reply_to = props.reply_to),
+                                body=body)
             else:                
-                if data.player not in self.players.values():
-                    print("Error, unknown player")
-                    
-                # Destination is free, we accept the move
-                elif data.cellid() not in self.players.keys():
+                if data.cellid() not in self.players.keys():
+                    data.player.area = self.id
+                    data.player.position = data.cellid()
                     self.players[data.cellid()] = data.player
                     self.players[data.cellid()].last_activity = time()
                     
-                    ch.basic_publish(exchange='broadcast',
-                                     routing_key='',
-                                     body=json_encode(model.Event(model.Event.PLAYER_MOVE, data.player, data.destination)))
+                    self.dispatcher(exchange='broadcast',
+                                    routing_key='',
+                                    body=json_encode(model.Event(model.Event.PLAYER_MOVE, player=data.player, area=self.id, position=data.cellid())))
                     # TODO: say hi if some is nearby
                 else:
                     data.status = model.MoveRequest.FAILED
-                    ch.basic_publish(exchange='direct',
-                                     routing_key=props.reply_to,
-                                     body=json_encode(data))
+                    self.dispatcher(exchange='direct',
+                                    routing_key=props.reply_to,
+                                    body=json_encode(data))
             ch.basic_ack(delivery_tag = method.delivery_tag)
         elif isinstance(data, model.JoinRequest):
             if len(self.players) == 16:
@@ -105,29 +116,29 @@ class Area:
             self.players[c] = data.player
             self.players[c].last_activity = time()
             
-            ch.basic_publish(exchange='',
-                             routing_key=props.reply_to,
-                             body=json_encode(
-                                model.Event(model.Event.PLAYER_JOIN, 
-                                            player=data.player, 
-                                            area=self.id, 
-                                            position=c)))
+            self.dispatcher(exchange='',
+                            routing_key=props.reply_to,
+                            body=json_encode(self.gameinfo.playercopy(player)))
             
-            ch.basic_publish(exchange='broadcast',
-                             routing_key='',
-                             body=json_encode(
-                                model.Event(model.Event.PLAYER_JOIN, 
-                                            player=data.player)))
+            self.dispatcher(exchange='broadcast',
+                            routing_key='',
+                            body=json_encode(
+                            model.Event(model.Event.PLAYER_JOIN, 
+                                        player=data.player)))
             
             ch.basic_ack(delivery_tag = method.delivery_tag)
         elif isinstance(data, model.Event):
             if data.type == model.Event.QUIT and data.player in self.players.values():
                 self.player_disconnect(data.player, model.Player.DISCONNECT_QUIT)
-            if data.type == model.Event.KEEP_ALIVE and data.player in self.players.values() \
+            elif data.type == model.Event.KEEP_ALIVE and data.player in self.players.values() \
+                and data.player.position in self.players.keys() \
                 and self.players[data.player.position] == data.player:
-                self.players[data.player.position].last_activity = time()
+                self.players[data.player.position].last_activity = time()                
+            elif data.type == model.Event.PLAYER_MOVE and data.player in self.players.values() \
+                and data.area != self.id:
+                    del self.players[list(self.players.keys())[list(self.players.values()).index(data.player)]]     
+            elif data.type == model.Event.PLAYER_JOIN:
+                self.dispatcher(model.Event(model.Event.GAME_INFO, players=list(self.players.values())))
                 
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
-    def run(self):
-        self.channel.start_consuming()
