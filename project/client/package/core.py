@@ -56,7 +56,7 @@ class GameCore(QThread):
         self._pending_requests = Queue()
         
         self.isready = Event()
-        self.isready.clear()
+        self.isregistered = Event()
         
         self.rmq = Lock()
         
@@ -64,7 +64,8 @@ class GameCore(QThread):
         self.keep_alive_timer.timeout.connect(self.keep_alive)
         self.keep_alive_timer.start(2000)
         
-        self.dispatcher_thread = Thread(target=self.dispatcher).start()
+        self.dispatcher_thread = Thread(target=self.dispatcher)
+        self.dispatcher_thread.start()
         
         print ("Initialising a game on %s with the nickname '%s'" % (server, nickname))
         
@@ -135,7 +136,7 @@ class GameCore(QThread):
     def stop(self):
         self.keep_alive_timer.stop()
         if self.player.is_on_board():
-            self.dispatch(model.Event(model.Event.QUIT, player=self.player)).get()
+            self.dispatch(model.Event(model.Event.QUIT, player=self.player))
         self.isrunning = False
         self._pending_requests.put(None)
         self.dispatcher_thread.join()
@@ -151,13 +152,14 @@ class GameCore(QThread):
     def _register(self):
         try:
             self.statusChanged.emit("Accessing to the game...")
-            p = self._request(JoinRequest(self.player)).player
+            gameinfo = self._request(JoinRequest(self.player))
             
-            assert p.nickname == self.player.nickname
-            self.player = p
+            assert gameinfo.player.nickname == self.player.nickname
+            self.player = gameinfo.player
             
-            self.errorEncounted.emit("Connected")
-            self.eventReceived.emit(model.Event(model.Event.GAME_READY, player=self.player))
+            self.statusChanged.emit("Connected")
+            self.eventReceived.emit(model.Event(model.Event.GAME_READY, gameinfo=gameinfo))
+            self.isregistered.set()
         except TiemoutException:
             self.eventReceived.emit(model.Event(model.Event.ERROR, msg="Game server couldn't be reached."))
         
@@ -166,9 +168,13 @@ class GameCore(QThread):
         
     def _movePlayer(self, area, pos):
         try:
-            self._request(MoveRequest(self.player, area, pos))
+            reply = self._request(MoveRequest(self.player, area, pos))
+            if reply.status != model.MoveRequest.SUCCESS:
+                self.eventReceived.emit(model.Event(model.Event.ERROR, msg="You cannot move their")) 
+            else:
+                self.player.area, self.player.position = reply.player.area, reply.player.position
         except TiemoutException:
-            self.eventReceived.emit(model.Event(model.Event.ERROR, msg="Game server conneciont is lost."))
+            self.eventReceived.emit(model.Event(model.Event.ERROR, msg="Game server connexion is lost."))
         
      
     #####################
@@ -182,9 +188,8 @@ class GameCore(QThread):
     def on_broadcast(self, ch, method, props, body):
         data = json_decode(body)
         
-        print("Receive: %s" % body.decode())
-        
         if isinstance(data, model.Event):
+            self.isregistered.wait()
             self.eventReceived.emit(data)            
             
         ch.basic_ack(delivery_tag = method.delivery_tag)
@@ -193,8 +198,6 @@ class GameCore(QThread):
     def _send(self, data, _type=0x1):
         try:
             self.rmq.acquire()
-            # ~ print("Sending to %s: " % ('main_queue' if not self.player.is_on_board() or _type == GameCore.BROADCAST 
-                                            # ~ else "node_area_%d" % self.player.area), json_encode(data))
             self.channel.basic_publish(exchange='',
                                        routing_key='main_queue' if not self.player.is_on_board() or _type == GameCore.BROADCAST 
                                             else "node_area_%d" % self.player.area,

@@ -1,4 +1,5 @@
 from copy import copy
+from random import choice
 
 class Main:
     @classmethod
@@ -18,12 +19,13 @@ class Main:
 
 class Game(Main):
     
-    def __init__(self, nxarea=None, nyarea=None, sxarea=None, syarea=None, player=None):
+    def __init__(self, nxarea=0, nyarea=0, sxarea=0, syarea=0, player=None):
         self.nxarea = nxarea
         self.nyarea = nyarea
         self.sxarea = sxarea
         self.syarea = syarea
         self.player = player
+        self.area_color = [13 for i in range(0, nxarea * nyarea)]
         
     def playercopy(self, player):
         ret = copy(self)
@@ -37,11 +39,17 @@ class Player(Main):
     DISCONNECT_TIMEOUT = 0x1
     DISCONNECT_KICK = 0x2
     
+    AVAILABLE_COLOR = [3,  #	White (#ffffff)
+                       7,  #	Red (#ff0000)
+                       8,  #	Green (#00ff00)
+                       9]  #	Blue (#0000ff)
+    
     def __init__(self, nickname=None):
         self.nickname = nickname
         self.area = None
         self.position = None
         self.uuid = None
+        self.color = choice(Player.AVAILABLE_COLOR)
         
     def is_on_board(self):
         return self.area is not None and self.position is not None
@@ -58,8 +66,9 @@ class Player(Main):
         
 class Request(Main):
     
-    PENDING = 0x0
-    FAILED = 0x1     
+    SUCCESS = 0x0
+    PENDING = 0x1     
+    FAILED = 0x2    
        
 class MoveRequest(Request):
     
@@ -107,3 +116,10 @@ class Event(Main):
     def __iter__(self):
         print(self.__dict__.keys())
         return (getattr(self, x) for x in self.__dict__.keys() if x != "type")
+        
+class Hello:
+    AVAILABLE_MSG = ["Bonjour %s!", "Hello %s!", "Guten tage %s!"]
+    
+    @classmethod
+    def generate(cls, nickname):
+        return choice(Hello.AVAILABLE_MSG) % nickname
