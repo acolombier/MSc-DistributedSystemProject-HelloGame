@@ -57,7 +57,7 @@ class Area:
     def send_hello(self, player):
         ch.basic_publish(exchange='broadcast',
                          routing_key='',
-                         body=json_encode(model.Event(model.Event.PLAYER_SAYS, player, 'Hello')))
+                         body=json_encode(model.Event(model.Event.PLAYER_SAYS, player=player, message='Hello')))
 
     def player_alive_check(self):
         # Make a local copy of the current state, in case of someone arrives during the cleaning routing (RuntimeError)
@@ -152,27 +152,27 @@ class Area:
             
             # TODO check this
             if data.type == model.Event.PLAYER_MOVE:
-
                 topology_dim = 4
                 # data.args.destination.area I don't think it works like this
-                if data.args.destination.area + topology_dim == self.id:
+                if data.args.area + topology_dim == self.id:
                     y = self.area_dimension - 1
                     for x in range(self.area_dimension):
-                        if  self.players((y * self.area_dimension) + x):
+                        if (y*self.area_dimension + x) in self.players.keys():
                             send_hello(data.args.destination.area, player)
-                elif data.args.destination.area - topology_dim == self.id:
+                elif data.args.area - topology_dim == self.id:
                     y = 0
                     for x in range(self.area_dimension):
-                        if  self.players((y * self.area_dimension) + x):
+                        if (y*self.area_dimension + x) in self.players.keys():
                             send_hello(data.args.destination.area, player)
-                elif data.args.destination.area - 1 == self.id:
+                elif data.args.area - 1 == self.id:
                     x = self.area_dimension - 1
                     for y in range(self.area_dimension):
-                        if  self.players((y * self.area_dimension) + x):
+                        if (y*self.area_dimension + x) in self.players.keys():
                             send_hello(data.args.destination.area, player)
-                elif data.args.destination.area - 1 == self.id:
+                elif data.args.area - 1 == self.id:
+                    x = 0
                     for y in range(self.area_dimension):
-                        if  self.players((y * self.area_dimension) + x):
+                        if (y*self.area_dimension + x) in self.players.keys():
                             send_hello(data.args.destination.area, player)
 
             #TODO
