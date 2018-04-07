@@ -19,9 +19,10 @@ class Area:
                        7,  #	Dark magenta (#800080)
                        12, #	Yellow (#ffff00)
                        18, #	Dark yellow (#808000)
-                       5,  #	Gray (#a0a0a4)
-                       4,  #	Dark gray (#808080)
-                       6]  #    Light gray (#c0c0c0) 
+                       #5,  #	Gray (#a0a0a4) <Doesn't look good>
+                       #4,  #	Dark gray (#808080)  <Doesn't look good>
+                       #6  #    Light gray (#c0c0c0) <Doesn't look good>
+                       ]
                        
     def __init__(self, _id, gameinfo, channel, disp):
         self.id = _id
@@ -34,7 +35,13 @@ class Area:
         
         self.channel = channel
         self.dispatcher = disp
-        
+
+        # TODO : keep list of free cells to remove the overhead when of looping until finding free cell 
+        # There is an easy way
+
+        # TODO : I added the attribute area_dimension like this, 
+        # use self.gameinfo.n[x|y]area instead
+
         channel.queue_declare(queue='main_queue')
         channel.queue_declare(queue='node_area_%d' % self.id)
         channel.basic_qos(prefetch_count=1)
@@ -88,18 +95,22 @@ class Area:
         data = json_decode(body)
                 
         # ~ print("Area %d: On request: %s" % (self.id, body))
-        
+
+        # save the last activity for a player connected
         if hasattr(data, 'player') and data.player.uuid in self.players.keys():
             self.players[data.player].last_activity = time()
         
+        # Check request type and handle it depending on its type  
         if isinstance(data, model.MoveRequest):
-            # Destination is away, we forward the request
+            # Destination is in another area, forward the request to that area
             if data.area() != self.id:
                 self.dispatcher(exchange='direct',
                                 routing_key='node_area_%d' % data.area(),
                                 properties=pika.BasicProperties(reply_to = props.reply_to),
                                 body=body)
-            else:                
+            # Destination in my this area
+            else:
+                # Check if the destination cell is not occupied by other players
                 if data.cellid() not in self.players.keys():
                     data.player.area = self.id
                     data.player.position = data.cellid()
@@ -118,6 +129,8 @@ class Area:
                                                                  player=data.player, 
                                                                  area=self.id, 
                                                                  position=data.cellid())))
+			# TODO : Say Hello if there is a player in adjacent cell
+			# Has to be done in the event handler
                 else:
                     data.status = model.MoveRequest.FAILED
                     self.dispatcher(exchange='',
@@ -125,26 +138,40 @@ class Area:
                                     body=json_encode(data))
             ch.basic_ack(delivery_tag = method.delivery_tag)
         elif isinstance(data, model.JoinRequest):
+            # TODO : do we need to send that the join request has been rejected?
+            # Reject Join request when area is full 
             if len(self.players) == 16:
                 print("Error: the area is full")
                 ch.basic_nack(delivery_tag = method.delivery_tag)
                 
-            c = randint(0, 15)
-            while c in self.players.keys():
-                c = randint(0, 15)
-                
+            # TODO : This is very expensive, if you have 15 players then it might loop for long time
+            # Fair point!
+             
+             
+            # c = randint(0, 15)
+            # while c in self.players.keys():
+            #     c = randint(0, 15)
+            
+            # I propose to keep a list of free cells
+            # I would prefere no to keep any data as 'self' that might lead to corruption regarding the multi threading
+            
+            # Here is my proposal
+            c = choice([i for i in range(0, 15) if i not in self.players.keys()])
+
             print("Accepting new client '%s' at pos %s" % (data.player.nickname, c))
-                
+            
             data.player.area = self.id
             data.player.position = c
             data.player.uuid = str(uuid.uuid4())
             self.players[c] = data.player
             self.players[c].last_activity = time()
             
+            # TODO : reply to prodedure call right? 
             self.dispatcher(exchange='',
                             routing_key=props.reply_to,
                             body=json_encode(self.gameinfo.playercopy(data.player)))
-            
+
+            # inform other areas and players that a new player joined
             self.dispatcher(exchange='broadcast',
                             routing_key='',
                             body=json_encode(
@@ -160,8 +187,6 @@ class Area:
                 and self.players[data.player.position] == data.player:
                 self.players[data.player.position].last_activity = time()    
             elif data.type == model.Event.PLAYER_MOVE:  
-                # TODO check this
-                topology_dim = 4
                 if data.player.area == self.id:
                     if (data.player.position - 1) in self.players.keys():                        
                         self.dispatcher(exchange='broadcast',
@@ -192,28 +217,28 @@ class Area:
                     # ~ print("%d ?%d: x neightboor " % (self.id, data.player.area), abs(data.player.area - self.id) == 1 and int(data.player.area / self.gameinfo.nxarea) == int(self.id / self.gameinfo.nxarea))
                     # ~ print("%d ?%d: y neightboor " % (self.id, data.player.area), abs(data.player.area - self.id) == self.gameinfo.nxarea and data.player.area % self.gameinfo.nxarea == self.id % self.gameinfo.nxarea)
                  
-                    # ~ data.player.position / self.gameinfo.nxarea == self.gameinfo.nyarea - 1
-                # data.destination.area I don't think it works like this
-                # ~ if data.area + topology_dim == self.id:
+                # TODO check this
+                # ~ topology_dim = 4
+                # ~ if data.args.area + topology_dim == self.id:
                     # ~ y = self.area_dimension - 1
                     # ~ for x in range(self.area_dimension):
                         # ~ if (y*self.area_dimension + x) in self.players.keys():
-                            # ~ send_hello(data.destination.area, player)
-                # ~ elif data.area - topology_dim == self.id:
+                            # ~ say_hello(self.players[y*self.area_dimension + x])
+                # ~ elif data.args.area - topology_dim == self.id:
                     # ~ y = 0
                     # ~ for x in range(self.area_dimension):
                         # ~ if (y*self.area_dimension + x) in self.players.keys():
-                            # ~ send_hello(data.destination.area, player)
-                # ~ elif data.area - 1 == self.id:
+                            # ~ say_hello(self.players[y*self.area_dimension + x])
+                # ~ elif data.args.area - 1 == self.id:
                     # ~ x = self.area_dimension - 1
                     # ~ for y in range(self.area_dimension):
                         # ~ if (y*self.area_dimension + x) in self.players.keys():
-                            # ~ send_hello(data.destination.area, player)
-                # ~ elif data.area - 1 == self.id:
+                            # ~ say_hello(self.players[y*self.area_dimension + x])
+                # ~ elif data.args.area - 1 == self.id:
                     # ~ x = 0
                     # ~ for y in range(self.area_dimension):
                         # ~ if (y*self.area_dimension + x) in self.players.keys():
-                            # ~ send_hello(data.destination.area, player)   
+                            # ~ say_hello(self.players[y*self.area_dimension + x])
                 # end check
                  
                 if data.player in self.players.values() and data.area != self.id:

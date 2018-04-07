@@ -134,8 +134,6 @@ class Player(QWidget):
         self.area = area
         self.position = position
         
-        self.animateSays("Text")
-        
         self.move(self.parent().area[self.area].cellpos(self.position))
         self.show()
         self.raise_()

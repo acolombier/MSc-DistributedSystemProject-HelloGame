@@ -116,6 +116,7 @@ class Event(Main):
     def __iter__(self):
         print(self.__dict__.keys())
         return (getattr(self, x) for x in self.__dict__.keys() if x != "type")
+ 
         
 class Hello:
     AVAILABLE_MSG = ["Bonjour %s!", "Hello %s!", "Guten tage %s!"]
@@ -123,3 +124,11 @@ class Hello:
     @classmethod
     def generate(cls, nickname):
         return choice(Hello.AVAILABLE_MSG) % nickname
+ 
+        
+class Letsgo:
+    AVAILABLE_MSG = ["C'est parti!", "Let's go!", "Los geht's!"]
+    
+    @classmethod
+    def generate(cls):
+        return choice(Letsgo.AVAILABLE_MSG)

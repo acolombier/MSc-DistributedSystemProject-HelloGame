@@ -190,7 +190,9 @@ class GameCore(QThread):
         
         if isinstance(data, model.Event):
             self.isregistered.wait()
-            self.eventReceived.emit(data)            
+            self.eventReceived.emit(data)  
+            # TODO : We should handel the receiption of SAY_HELLO_EVENT          
+            # It is done in the event receiver handler (see Controller::onEvent, main.py:68)
             
         ch.basic_ack(delivery_tag = method.delivery_tag)
         

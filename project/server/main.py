@@ -68,7 +68,7 @@ class Dispatcher(Thread):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Hello Game server launcher.')
     
-    parser.add_argument('--single-node', dest='node_id', default=1, type=int, nargs='?', help='Launch a single node with the given id')
+    parser.add_argument('--single-node', dest='node_id', default=-1, type=int, nargs='?', help='Launch a single node with the given id')
     parser.add_argument('rmq_host', type=str, default='localhost',
                 help='Server name that run RabbitMQ')
     parser.add_argument('row', type=int, default=2,
@@ -90,7 +90,10 @@ if __name__ == "__main__":
     
     dispatcher = Dispatcher(channel)
     
-    area = [Area(i, gameinfo, channel, dispatcher) for i in range(0, 4)]
+    if args.node_id == -1:
+        area = [Area(i, gameinfo, channel, dispatcher) for i in range(0, args.row * args.col)]
+    else:
+        area = [Area(args.node_id, gameinfo, channel, dispatcher)]
         
     dispatcher.start()
     dispatcher.consume(connection)

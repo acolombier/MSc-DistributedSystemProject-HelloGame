@@ -59,6 +59,8 @@ class Controller(QApplication):
         elif event.type == model.Event.GAME_INFO:  
             for p in event.players:
                 self.gm.board.addplayer(p)
+            
+            self.gm.board.saysplayer(self.core.player, Letsgo.generate())
         elif event.type == model.Event.PLAYER_JOIN: 
             self.gm.board.addplayer(event.player)
         elif event.type == model.Event.QUIT: 
