@@ -185,6 +185,7 @@ class GameCore(QThread):
         print("Receive: %s" % body.decode())
         
         if isinstance(data, model.Event):
+            # TODO : We should handel the receiption of SAY_HELLO_EVENT
             self.eventReceived.emit(data)            
             
         ch.basic_ack(delivery_tag = method.delivery_tag)
