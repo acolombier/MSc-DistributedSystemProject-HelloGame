@@ -54,7 +54,7 @@ class Area:
         print("Node %d is up" % self.id)
 
     # TODO check this
-    def send_hello(self, player):
+    def say_hello(self, player):
         ch.basic_publish(exchange='broadcast',
                          routing_key='',
                          body=json_encode(model.Event(model.Event.PLAYER_SAYS, player=player, message='Hello')))
@@ -102,7 +102,13 @@ class Area:
                     self.dispatcher(exchange='broadcast',
                                     routing_key='',
                                     body=json_encode(model.Event(model.Event.PLAYER_MOVE, player=data.player, area=self.id, position=data.cellid())))
-                    # TODO: say hi if some is nearby
+                    
+                    # TODO : Send hello to a player in the same area
+                    for cell in (data.cellid()-1, data.cellid()+1, data.cellid()-size,data.cellid()+size):
+                        if cell in self.players.keys():
+                            say_hello(data.player)
+
+
                 else:
                     data.status = model.MoveRequest.FAILED
                     self.dispatcher(exchange='direct',
@@ -158,22 +164,22 @@ class Area:
                     y = self.area_dimension - 1
                     for x in range(self.area_dimension):
                         if (y*self.area_dimension + x) in self.players.keys():
-                            send_hello(data.args.destination.area, player)
+                            say_hello(player)
                 elif data.args.area - topology_dim == self.id:
                     y = 0
                     for x in range(self.area_dimension):
                         if (y*self.area_dimension + x) in self.players.keys():
-                            send_hello(data.args.destination.area, player)
+                            say_hello(player)
                 elif data.args.area - 1 == self.id:
                     x = self.area_dimension - 1
                     for y in range(self.area_dimension):
                         if (y*self.area_dimension + x) in self.players.keys():
-                            send_hello(data.args.destination.area, player)
+                            say_hello(player)
                 elif data.args.area - 1 == self.id:
                     x = 0
                     for y in range(self.area_dimension):
                         if (y*self.area_dimension + x) in self.players.keys():
-                            send_hello(data.args.destination.area, player)
+                            say_hello(player)
 
             #TODO
             #if data.type == model.Event.PLAYER_SAYS:
