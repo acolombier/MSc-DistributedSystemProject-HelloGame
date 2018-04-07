@@ -6,21 +6,34 @@ import uuid
 from time import time
 from threading import Timer
 from copy import copy
+from random import choice
 
-class Area:
+class Area:    
+                    
+    AVAILABLE_COLOR = [13, #	Dark red (#800000)
+                       14, #	Dark green (#008000)
+                       15, #	Dark blue (#000080)
+                       10, #	Cyan (#00ffff)
+                       16, #	Dark cyan (#008080)
+                       11, #	Magenta (#ff00ff)
+                       7,  #	Dark magenta (#800080)
+                       12, #	Yellow (#ffff00)
+                       18, #	Dark yellow (#808000)
+                       5,  #	Gray (#a0a0a4)
+                       4,  #	Dark gray (#808080)
+                       6]  #    Light gray (#c0c0c0) 
+                       
     def __init__(self, _id, gameinfo, channel, disp):
         self.id = _id
         
         self.players = {}
         
+        
+        gameinfo.area_color[_id] = choice(Area.AVAILABLE_COLOR)
         self.gameinfo = gameinfo
         
         self.channel = channel
         self.dispatcher = disp
-
-        # TODO : I added the attribute area_dimension like this, 
-            #can you add it the the init function
-        self.area_dimension = 4
         
         channel.queue_declare(queue='main_queue')
         channel.queue_declare(queue='node_area_%d' % self.id)
@@ -51,23 +64,17 @@ class Area:
         
         self.player_alive_check() 
         
-        print("Node %d is up" % self.id)
-
-    # TODO check this
-    def send_hello(self, player):
-        ch.basic_publish(exchange='broadcast',
-                         routing_key='',
-                         body=json_encode(model.Event(model.Event.PLAYER_SAYS, player=player, message='Hello')))
+        print("Node %d(color %d) is up" % (self.id, gameinfo.area_color[_id]))
 
     def player_alive_check(self):
         # Make a local copy of the current state, in case of someone arrives during the cleaning routing (RuntimeError)
         players = copy(self.players)
         
         for pos, player in players.items():
-            if player.last_activity + 6 < time():
+            if player.last_activity + 10 < time():
                 self.player_disconnect(player, model.Player.DISCONNECT_TIMEOUT)
         
-        self.player_ka_timer = Timer(6.0, self.player_alive_check)
+        self.player_ka_timer = Timer(15.0, self.player_alive_check)
         self.player_ka_timer.start() 
         
     def player_disconnect(self, player, r=model.Player.DISCONNECT_QUIT):        
@@ -80,7 +87,7 @@ class Area:
     def on_request(self, ch, method, props, body):
         data = json_decode(body)
                 
-        print("Area %d: On request: %s" % (self.id, body))
+        # ~ print("Area %d: On request: %s" % (self.id, body))
         
         if hasattr(data, 'player') and data.player.uuid in self.players.keys():
             self.players[data.player].last_activity = time()
@@ -96,16 +103,24 @@ class Area:
                 if data.cellid() not in self.players.keys():
                     data.player.area = self.id
                     data.player.position = data.cellid()
-                    self.players[data.cellid()] = data.player
-                    self.players[data.cellid()].last_activity = time()
+                    data.status = model.MoveRequest.SUCCESS
                     
+                    self.players[data.cellid()] = data.player
+                    self.players[data.cellid()].last_activity = time()                    
+            
+                    self.dispatcher(exchange='',
+                                    routing_key=props.reply_to,
+                                    body=json_encode(data))
+                            
                     self.dispatcher(exchange='broadcast',
                                     routing_key='',
-                                    body=json_encode(model.Event(model.Event.PLAYER_MOVE, player=data.player, area=self.id, position=data.cellid())))
-                    # TODO: say hi if some is nearby
+                                    body=json_encode(model.Event(model.Event.PLAYER_MOVE, 
+                                                                 player=data.player, 
+                                                                 area=self.id, 
+                                                                 position=data.cellid())))
                 else:
                     data.status = model.MoveRequest.FAILED
-                    self.dispatcher(exchange='direct',
+                    self.dispatcher(exchange='',
                                     routing_key=props.reply_to,
                                     body=json_encode(data))
             ch.basic_ack(delivery_tag = method.delivery_tag)
@@ -128,7 +143,7 @@ class Area:
             
             self.dispatcher(exchange='',
                             routing_key=props.reply_to,
-                            body=json_encode(self.gameinfo.playercopy(player)))
+                            body=json_encode(self.gameinfo.playercopy(data.player)))
             
             self.dispatcher(exchange='broadcast',
                             routing_key='',
@@ -140,42 +155,76 @@ class Area:
         elif isinstance(data, model.Event):
             if data.type == model.Event.QUIT and data.player in self.players.values():
                 self.player_disconnect(data.player, model.Player.DISCONNECT_QUIT)
-            elif data.type == model.Event.KEEP_ALIVE and data.player in self.players.values() \
+            elif data.type == model.Event.KEEP_ALIVE and data.player.area == self.id \
                 and data.player.position in self.players.keys() \
                 and self.players[data.player.position] == data.player:
-                self.players[data.player.position].last_activity = time()                
-            elif data.type == model.Event.PLAYER_MOVE and data.player in self.players.values() \
-                and data.area != self.id:
-                    del self.players[list(self.players.keys())[list(self.players.values()).index(data.player)]]     
-            elif data.type == model.Event.PLAYER_JOIN:
-                self.dispatcher(model.Event(model.Event.GAME_INFO, players=list(self.players.values())))
-            
-            # TODO check this
-            if data.type == model.Event.PLAYER_MOVE:
+                self.players[data.player.position].last_activity = time()    
+            elif data.type == model.Event.PLAYER_MOVE:  
+                # TODO check this
                 topology_dim = 4
-                # data.args.destination.area I don't think it works like this
-                if data.args.area + topology_dim == self.id:
-                    y = self.area_dimension - 1
-                    for x in range(self.area_dimension):
-                        if (y*self.area_dimension + x) in self.players.keys():
-                            send_hello(data.args.destination.area, player)
-                elif data.args.area - topology_dim == self.id:
-                    y = 0
-                    for x in range(self.area_dimension):
-                        if (y*self.area_dimension + x) in self.players.keys():
-                            send_hello(data.args.destination.area, player)
-                elif data.args.area - 1 == self.id:
-                    x = self.area_dimension - 1
-                    for y in range(self.area_dimension):
-                        if (y*self.area_dimension + x) in self.players.keys():
-                            send_hello(data.args.destination.area, player)
-                elif data.args.area - 1 == self.id:
-                    x = 0
-                    for y in range(self.area_dimension):
-                        if (y*self.area_dimension + x) in self.players.keys():
-                            send_hello(data.args.destination.area, player)
-
-            #TODO
-            #if data.type == model.Event.PLAYER_SAYS:
-    
+                if data.player.area == self.id:
+                    if (data.player.position - 1) in self.players.keys():                        
+                        self.dispatcher(exchange='broadcast',
+                                        routing_key='',
+                                        body=json_encode(
+                                        model.Event(model.Event.PLAYER_SAYS, 
+                                                    player=self.players[data.player.position - 1], msg=model.Hello.generate(data.player.nickname))))
+                    if (data.player.position + 1) in self.players.keys():                        
+                        self.dispatcher(exchange='broadcast',
+                                        routing_key='',
+                                        body=json_encode(
+                                        model.Event(model.Event.PLAYER_SAYS, 
+                                                    player=self.players[data.player.position + 1], msg=model.Hello.generate(data.player.nickname))))
+                    if (data.player.position - self.gameinfo.sxarea) in self.players.keys():                        
+                        self.dispatcher(exchange='broadcast',
+                                        routing_key='',
+                                        body=json_encode(
+                                        model.Event(model.Event.PLAYER_SAYS, 
+                                                    player=self.players[data.player.position - self.gameinfo.sxarea], msg=model.Hello.generate(data.player.nickname))))
+                    
+                    if (data.player.position + self.gameinfo.sxarea) in self.players.keys():                        
+                        self.dispatcher(exchange='broadcast',
+                                        routing_key='',
+                                        body=json_encode(
+                                        model.Event(model.Event.PLAYER_SAYS, 
+                                                    player=self.players[data.player.position + self.gameinfo.sxarea], msg=model.Hello.generate(data.player.nickname))))
+                        
+                    # ~ print("%d ?%d: x neightboor " % (self.id, data.player.area), abs(data.player.area - self.id) == 1 and int(data.player.area / self.gameinfo.nxarea) == int(self.id / self.gameinfo.nxarea))
+                    # ~ print("%d ?%d: y neightboor " % (self.id, data.player.area), abs(data.player.area - self.id) == self.gameinfo.nxarea and data.player.area % self.gameinfo.nxarea == self.id % self.gameinfo.nxarea)
+                 
+                    # ~ data.player.position / self.gameinfo.nxarea == self.gameinfo.nyarea - 1
+                # data.destination.area I don't think it works like this
+                # ~ if data.area + topology_dim == self.id:
+                    # ~ y = self.area_dimension - 1
+                    # ~ for x in range(self.area_dimension):
+                        # ~ if (y*self.area_dimension + x) in self.players.keys():
+                            # ~ send_hello(data.destination.area, player)
+                # ~ elif data.area - topology_dim == self.id:
+                    # ~ y = 0
+                    # ~ for x in range(self.area_dimension):
+                        # ~ if (y*self.area_dimension + x) in self.players.keys():
+                            # ~ send_hello(data.destination.area, player)
+                # ~ elif data.area - 1 == self.id:
+                    # ~ x = self.area_dimension - 1
+                    # ~ for y in range(self.area_dimension):
+                        # ~ if (y*self.area_dimension + x) in self.players.keys():
+                            # ~ send_hello(data.destination.area, player)
+                # ~ elif data.area - 1 == self.id:
+                    # ~ x = 0
+                    # ~ for y in range(self.area_dimension):
+                        # ~ if (y*self.area_dimension + x) in self.players.keys():
+                            # ~ send_hello(data.destination.area, player)   
+                # end check
+                 
+                if data.player in self.players.values() and data.area != self.id:
+                    del self.players[list(self.players.keys())[list(self.players.values()).index(data.player)]]      
+            elif data.type == model.Event.PLAYER_JOIN:
+                self.dispatcher(exchange='broadcast',
+                                routing_key='',
+                                body=json_encode(
+                                model.Event(model.Event.GAME_INFO, players=list(self.players.values()))))
+                
             ch.basic_ack(delivery_tag = method.delivery_tag)
+
+    def stop(self):
+        self.player_ka_timer.cancel()

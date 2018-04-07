@@ -55,11 +55,14 @@ class Dispatcher(Thread):
                 self.rmq.acquire()
                 connection.process_data_events()
             except KeyboardInterrupt:
-                self.isrunning = False
+                print("Shutdown requested...")
+                self.isrunning = False                
             finally:
                 self.rmq.release()
+        print("RabbitMQ has finished, waiting for the dispatcher...")
         self._pending_requests.put(None)
         self.join()
+        print("Bye")
         
         
 if __name__ == "__main__":
@@ -68,10 +71,14 @@ if __name__ == "__main__":
     parser.add_argument('--single-node', dest='node_id', default=1, type=int, nargs='?', help='Launch a single node with the given id')
     parser.add_argument('rmq_host', type=str, default='localhost',
                 help='Server name that run RabbitMQ')
-    parser.add_argument('width', type=int, default=2,
+    parser.add_argument('row', type=int, default=2,
                 help='Number of Area on a row')
-    parser.add_argument('height', type=int, default=2,
+    parser.add_argument('col', type=int, default=2,
                 help='Number of Area on a col')
+    parser.add_argument('area_width', type=int, default=4,
+                help='Width of an area')
+    parser.add_argument('area_height', type=int, default=4,
+                help='Height of an area')
     args = parser.parse_args()
     
     
@@ -79,7 +86,7 @@ if __name__ == "__main__":
     connection = pika.BlockingConnection(pika.ConnectionParameters(args.rmq_host))
     channel = connection.channel()
     
-    gameinfo = model.Game(2, 2, 4, 4)
+    gameinfo = model.Game(args.row, args.col, args.area_width, args.area_height)
     
     dispatcher = Dispatcher(channel)
     
@@ -87,3 +94,6 @@ if __name__ == "__main__":
         
     dispatcher.start()
     dispatcher.consume(connection)
+    
+    for a in area:
+        a.stop()
