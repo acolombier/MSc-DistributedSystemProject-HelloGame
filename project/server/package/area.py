@@ -18,6 +18,9 @@ class Area:
         self.channel = channel
         self.dispatcher = disp
 
+        # TODO : keep list of free cells to remove the overhead when of looping until finding free cell 
+        self.free_cells = [i for i in range(16)]
+
         # TODO : I added the attribute area_dimension like this, 
             #can you add it the the init function
         self.area_dimension = 4
@@ -79,20 +82,23 @@ class Area:
 
     def on_request(self, ch, method, props, body):
         data = json_decode(body)
-                
         print("Area %d: On request: %s" % (self.id, body))
-        
+
+        # save the last activity for a player connected to the current area
         if hasattr(data, 'player') and data.player.uuid in self.players.keys():
             self.players[data.player].last_activity = time()
         
+        # Check request type and handle it depending on its type  
         if isinstance(data, model.MoveRequest):
-            # Destination is away, we forward the request
+            # Destination is in another area, forward the request to that area
             if data.area() != self.id:
                 self.dispatcher(exchange='direct',
                                 routing_key='node_area_%d' % data.area(),
                                 properties=pika.BasicProperties(reply_to = props.reply_to),
                                 body=body)
-            else:                
+            # Destination in my this area
+            else:
+                # Check if the destination cell is not occupied by other players
                 if data.cellid() not in self.players.keys():
                     data.player.area = self.id
                     data.player.position = data.cellid()
@@ -103,12 +109,12 @@ class Area:
                                     routing_key='',
                                     body=json_encode(model.Event(model.Event.PLAYER_MOVE, player=data.player, area=self.id, position=data.cellid())))
                     
-                    # TODO : Send hello to a player in the same area
+                    # TODO : Say Hello if there is a player in adjacent cell
                     for cell in (data.cellid()-1, data.cellid()+1, data.cellid()-size,data.cellid()+size):
                         if cell in self.players.keys():
                             say_hello(data.player)
 
-
+                # Reject the move request if the destination cell is occupied
                 else:
                     data.status = model.MoveRequest.FAILED
                     self.dispatcher(exchange='direct',
@@ -116,14 +122,22 @@ class Area:
                                     body=json_encode(data))
             ch.basic_ack(delivery_tag = method.delivery_tag)
         elif isinstance(data, model.JoinRequest):
+            # TODO : do we need to send that the join request has been rejected?
+            # Reject Join request when area is full 
             if len(self.players) == 16:
                 print("Error: the area is full")
                 ch.basic_nack(delivery_tag = method.delivery_tag)
                 
-            c = randint(0, 15)
-            while c in self.players.keys():
-                c = randint(0, 15)
-                
+            # TODO : This is very expensive, if you have 15 players then it might loop for long time
+             
+            # c = randint(0, 15)
+            # while c in self.players.keys():
+            #     c = randint(0, 15)
+            # I propose to keep a list of free cells
+            free_cell_index = randint(0, len(self.free_cells) - 1)
+            c = self.free_cells[free_cell_index]
+            del(self.free_cells[free_cell_index])
+
             print("Accepting new client '%s' at pos %s" % (data.player.nickname, c))
                 
             data.player.area = self.id
