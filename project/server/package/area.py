@@ -139,17 +139,19 @@ class Area:
             del(self.free_cells[free_cell_index])
 
             print("Accepting new client '%s' at pos %s" % (data.player.nickname, c))
-                
+            
             data.player.area = self.id
             data.player.position = c
             data.player.uuid = str(uuid.uuid4())
             self.players[c] = data.player
             self.players[c].last_activity = time()
             
+            # TODO : reply to prodedure call right? 
             self.dispatcher(exchange='',
                             routing_key=props.reply_to,
                             body=json_encode(self.gameinfo.playercopy(player)))
-            
+
+            # inform other areas and players that a new player joined
             self.dispatcher(exchange='broadcast',
                             routing_key='',
                             body=json_encode(
@@ -170,10 +172,9 @@ class Area:
             elif data.type == model.Event.PLAYER_JOIN:
                 self.dispatcher(model.Event(model.Event.GAME_INFO, players=list(self.players.values())))
             
-            # TODO check this
+            # TODO check this "Saying hello when the player in other area"
             if data.type == model.Event.PLAYER_MOVE:
                 topology_dim = 4
-                # data.args.destination.area I don't think it works like this
                 if data.args.area + topology_dim == self.id:
                     y = self.area_dimension - 1
                     for x in range(self.area_dimension):
@@ -196,6 +197,6 @@ class Area:
                             say_hello(player)
 
             #TODO
-            #if data.type == model.Event.PLAYER_SAYS:
+            # if data.type == model.Event.PLAYER_SAYS:
     
             ch.basic_ack(delivery_tag = method.delivery_tag)
