@@ -36,6 +36,7 @@ class Area:
         self.channel = channel
         self.dispatcher = disp
 
+        print (self.gameinfo)
         # TODO : keep list of free cells to remove the overhead when of looping until finding free cell 
         # There is an easy way
 
@@ -204,7 +205,9 @@ class Area:
                 and data.player.position in self.players.keys() \
                 and self.players[data.player.position] == data.player:
                 self.players[data.player.position].last_activity = time()    
-            elif data.type == model.Event.PLAYER_MOVE:  
+            elif data.type == model.Event.PLAYER_MOVE:
+                # if (self.id == 3):
+                #     print (str(data.player.area) + "    " + str(self.id))   
                 if data.player.area == self.id:
                     if (data.player.position - 1) in self.players.keys():                        
                         self.dispatcher(exchange='broadcast',
@@ -231,34 +234,54 @@ class Area:
                                         body=json_encode(
                                         model.Event(model.Event.PLAYER_SAYS, 
                                                     player=self.players[data.player.position + self.gameinfo.sxarea], msg=model.Hello.generate(data.player.nickname))))
-                        
+                    
+                elif data.player.area + self.gameinfo.nxarea == self.id:
+                    position_x = data.player.position % self.gameinfo.sxarea
+                    position_y = data.player.position // self.gameinfo.sxarea
+                    if position_y ==  self.gameinfo.syarea -1 and  position_x in self.players.keys():
+                        self.dispatcher(exchange='broadcast',
+                                    routing_key='',
+                                    body=json_encode(
+                                    model.Event(model.Event.PLAYER_SAYS, 
+                                                    player=self.players[position_x], msg=model.Hello.generate(data.player.nickname))))
+                elif data.player.area - self.gameinfo.nxarea == self.id:
+                    position_x = data.player.position % self.gameinfo.sxarea
+                    position_y = data.player.position // self.gameinfo.sxarea
+                    if position_y == 0 and ((self.gameinfo.syarea - 1) * self.gameinfo.syarea) + position_x in self.players.keys():
+                            self.dispatcher(exchange='broadcast',
+                                        routing_key='',
+                                        body=json_encode(
+                                        model.Event(model.Event.PLAYER_SAYS, 
+                                                    player=self.players[((self.gameinfo.syarea - 1) * self.gameinfo.syarea) + position_x], msg=model.Hello.generate(data.player.nickname))))
+                elif data.player.area + 1 == self.id:
+                    position_x = data.player.position % self.gameinfo.sxarea
+                    position_y = data.player.position // self.gameinfo.sxarea
+                    if position_x == self.gameinfo.syarea-1 and position_y* self.gameinfo.syarea in self.players.keys():
+                        self.dispatcher(exchange='broadcast',
+                                        routing_key='',
+                                        body=json_encode(
+                                        model.Event(model.Event.PLAYER_SAYS, 
+                                                    player=self.players[position_y* self.gameinfo.syarea], msg=model.Hello.generate(data.player.nickname))))
+                elif data.player.area - 1 == self.id:
+                    position_x = data.player.position % self.gameinfo.sxarea
+                    position_y = data.player.position // self.gameinfo.sxarea
+                    if position_x == 0 and position_y*self.gameinfo.syarea + self.gameinfo.sxarea-1  in self.players.keys():
+                        self.dispatcher(exchange='broadcast',
+                                        routing_key='',
+                                        body=json_encode(
+                                        model.Event(model.Event.PLAYER_SAYS, 
+                                                    player=self.players[position_y*self.gameinfo.syarea + self.gameinfo.sxarea-1], msg=model.Hello.generate(data.player.nickname))))
+
+                    # for x in range(self.gameinfo.sxarea):
+                    #     if (y*self.gameinfo.sxarea + x) in self.players.keys():
+                    #         print ("XXXXXXX")
+                    #         self.dispatcher(exchange='broadcast',
+                    #                     routing_key='',
+                    #                     body=json_encode(
+                    #                     model.Event(model.Event.PLAYER_SAYS, 
+                                                    # player=self.players[y*self.gameinfo.sxarea + x], msg=model.Hello.generate(data.player.nickname))))
                     # ~ print("%d ?%d: x neightboor " % (self.id, data.player.area), abs(data.player.area - self.id) == 1 and int(data.player.area / self.gameinfo.nxarea) == int(self.id / self.gameinfo.nxarea))
-                    # ~ print("%d ?%d: y neightboor " % (self.id, data.player.area), abs(data.player.area - self.id) == self.gameinfo.nxarea and data.player.area % self.gameinfo.nxarea == self.id % self.gameinfo.nxarea)
-                 
-                # TODO check this
-                # ~ topology_dim = 4
-                # ~ if data.args.area + topology_dim == self.id:
-                    # ~ y = self.area_dimension - 1
-                    # ~ for x in range(self.area_dimension):
-                        # ~ if (y*self.area_dimension + x) in self.players.keys():
-                            # ~ say_hello(self.players[y*self.area_dimension + x])
-                # ~ elif data.args.area - topology_dim == self.id:
-                    # ~ y = 0
-                    # ~ for x in range(self.area_dimension):
-                        # ~ if (y*self.area_dimension + x) in self.players.keys():
-                            # ~ say_hello(self.players[y*self.area_dimension + x])
-                # ~ elif data.args.area - 1 == self.id:
-                    # ~ x = self.area_dimension - 1
-                    # ~ for y in range(self.area_dimension):
-                        # ~ if (y*self.area_dimension + x) in self.players.keys():
-                            # ~ say_hello(self.players[y*self.area_dimension + x])
-                # ~ elif data.args.area - 1 == self.id:
-                    # ~ x = 0
-                    # ~ for y in range(self.area_dimension):
-                        # ~ if (y*self.area_dimension + x) in self.players.keys():
-                            # ~ say_hello(self.players[y*self.area_dimension + x])
-                # end check
-                 
+                    # ~ print("%d ?%d: y neightboor " % (self.id, data.player.area), abs(data.player.area - self.id) == self.gameinfo.nxarea and data.player.area % self.gameinfo.nxarea == self.id % self.gameinfo.nxarea)                 
                 if data.player in self.players.values() and data.area != self.id:
                     del self.players[list(self.players.keys())[list(self.players.values()).index(data.player)]]      
             elif data.type == model.Event.PLAYER_JOIN:
