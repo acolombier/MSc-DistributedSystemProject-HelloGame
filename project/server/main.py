@@ -100,3 +100,5 @@ if __name__ == "__main__":
     
     for a in area:
         a.stop()
+        
+    connection.close()

@@ -42,15 +42,21 @@ class Area:
         # TODO : I added the attribute area_dimension like this, 
         # use self.gameinfo.n[x|y]area instead
 
-        channel.queue_declare(queue='main_queue')
+        channel.queue_declare(queue='main_queue')         
         channel.queue_declare(queue='node_area_%d' % self.id)
         channel.basic_qos(prefetch_count=1)
     
         ### Declaring Broadcast
         channel.exchange_declare(exchange='broadcast',
-                                 exchange_type='fanout')                                 
+                                 exchange_type='fanout')                           
         channel.queue_bind(exchange='broadcast',
                            queue="main_queue")
+        bcast_channel = channel.queue_declare(exclusive=True)
+        bcast_channel_name = bcast_channel.method.queue
+
+        channel.queue_bind(exchange='broadcast',
+                           queue=bcast_channel_name)
+
                                  
         ### Declaring Direct exchange for already registered 
         channel.exchange_declare(exchange='direct',
@@ -65,23 +71,26 @@ class Area:
         channel.queue_bind(exchange='public_direct',
                            queue="main_queue",
                            routing_key='main_queue')
-                           
-        channel.basic_consume(self.on_request, queue='main_queue')        
+         
+        # Binding consumer
+        channel.basic_consume(self.on_request, queue='main_queue')          
+        channel.basic_consume(self.on_request, queue=bcast_channel_name)          
         channel.basic_consume(self.on_request, queue='node_area_%d' % self.id)
         
         self.player_alive_check() 
         
-        print("Node %d(color %d) is up" % (self.id, gameinfo.area_color[_id]))
+        print("Node %d is up" % self.id)
 
     def player_alive_check(self):
         # Make a local copy of the current state, in case of someone arrives during the cleaning routing (RuntimeError)
         players = copy(self.players)
         
         for pos, player in players.items():
-            if player.last_activity + 10 < time():
+            if player.last_activity + model.Game.KEEP_ALIVE_TIMEOUT < time():
                 self.player_disconnect(player, model.Player.DISCONNECT_TIMEOUT)
+                print("Player %s has timed out from area %d" % (player.nickname, self.id))
         
-        self.player_ka_timer = Timer(15.0, self.player_alive_check)
+        self.player_ka_timer = Timer(model.Game.KEEP_ALIVE_TIMEOUT + model.Game.GRACE_TIME, self.player_alive_check)
         self.player_ka_timer.start() 
         
     def player_disconnect(self, player, r=model.Player.DISCONNECT_QUIT):        
@@ -112,6 +121,9 @@ class Area:
             else:
                 # Check if the destination cell is not occupied by other players
                 if data.cellid() not in self.players.keys():
+                    if data.player.position in self.players.keys() and self.players[data.player.position] == data.player:
+                        del self.players[data.player.position]
+                    
                     data.player.area = self.id
                     data.player.position = data.cellid()
                     data.status = model.MoveRequest.SUCCESS
@@ -143,6 +155,7 @@ class Area:
             if len(self.players) == 16:
                 print("Error: the area is full")
                 ch.basic_nack(delivery_tag = method.delivery_tag)
+                return
                 
             # TODO : This is very expensive, if you have 15 players then it might loop for long time
             # Fair point!
@@ -157,14 +170,14 @@ class Area:
             
             # Here is my proposal
             c = choice([i for i in range(0, 15) if i not in self.players.keys()])
-
-            print("Accepting new client '%s' at pos %s" % (data.player.nickname, c))
             
             data.player.area = self.id
             data.player.position = c
             data.player.uuid = str(uuid.uuid4())
             self.players[c] = data.player
             self.players[c].last_activity = time()
+
+            print("Accepting new player '%s' at pos %s" % (data.player, c))
             
             # TODO : reply to prodedure call right? 
             self.dispatcher(exchange='',
@@ -180,6 +193,11 @@ class Area:
             
             ch.basic_ack(delivery_tag = method.delivery_tag)
         elif isinstance(data, model.Event):
+            # Events are instantly acked
+            ch.basic_ack(delivery_tag = method.delivery_tag)
+            
+            # ~ print("Area %d: %s" % (self.id, data))
+            
             if data.type == model.Event.QUIT and data.player in self.players.values():
                 self.player_disconnect(data.player, model.Player.DISCONNECT_QUIT)
             elif data.type == model.Event.KEEP_ALIVE and data.player.area == self.id \
@@ -248,7 +266,8 @@ class Area:
                                 routing_key='',
                                 body=json_encode(
                                 model.Event(model.Event.GAME_INFO, players=list(self.players.values()))))
-                
+        else:     
+            print("Unknown packet: %s" % body)  
             ch.basic_ack(delivery_tag = method.delivery_tag)
 
     def stop(self):
