@@ -253,7 +253,7 @@ class Area:
                                         body=json_encode(
                                         model.Event(model.Event.PLAYER_SAYS, 
                                                     player=self.players[((self.gameinfo.syarea - 1) * self.gameinfo.syarea) + position_x], msg=model.Hello.generate(data.player.nickname))))
-                elif data.player.area + 1 == self.id:
+                elif data.player.area + 1 == self.id and (self.id) % self.gameinfo.nxarea != 0:
                     position_x = data.player.position % self.gameinfo.sxarea
                     position_y = data.player.position // self.gameinfo.sxarea
                     if position_x == self.gameinfo.syarea-1 and position_y* self.gameinfo.syarea in self.players.keys():
@@ -262,7 +262,7 @@ class Area:
                                         body=json_encode(
                                         model.Event(model.Event.PLAYER_SAYS, 
                                                     player=self.players[position_y* self.gameinfo.syarea], msg=model.Hello.generate(data.player.nickname))))
-                elif data.player.area - 1 == self.id:
+                elif data.player.area - 1 == self.id and (self.id + 1) % self.gameinfo.nxarea != 0:
                     position_x = data.player.position % self.gameinfo.sxarea
                     position_y = data.player.position // self.gameinfo.sxarea
                     if position_x == 0 and position_y*self.gameinfo.syarea + self.gameinfo.sxarea-1  in self.players.keys():
