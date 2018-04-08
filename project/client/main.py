@@ -6,6 +6,12 @@ import sys
 from threading import Thread,Event
 from random import choice
 
+### TODO ####
+# - Handle server disconnection
+# - Display text dynamically to make it fit in the window
+# - [BUG] Cannot close the game properly after one login failure
+# - [BUG] Quit signal is not send in time
+
 class Controller(QApplication):
 
     def __init__(self, *args):

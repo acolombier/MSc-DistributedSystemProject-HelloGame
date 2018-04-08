@@ -140,6 +140,7 @@ class GameCore(QThread):
         self.isrunning = False
         self._pending_requests.put(None)
         self.dispatcher_thread.join()
+        self.connection.close()
         
       
     #################################

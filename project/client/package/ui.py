@@ -176,6 +176,8 @@ class Player(QWidget):
         self.posAnimation.start()      
         
     def animateSays(self, msg):
+        if msg == self.message:
+            return
         self.message = msg
         
         if self.textbubble:

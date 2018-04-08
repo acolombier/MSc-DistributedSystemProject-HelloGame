@@ -18,6 +18,8 @@ class Main:
         
 
 class Game(Main):
+    KEEP_ALIVE_TIMEOUT = 4
+    GRACE_TIME = 2
     
     def __init__(self, nxarea=0, nyarea=0, sxarea=0, syarea=0, player=None):
         self.nxarea = nxarea
@@ -56,6 +58,12 @@ class Player(Main):
         
     def __eq__(self, other):
         return isinstance(other, Player) and self.uuid == other.uuid
+        
+    def __repr__(self):
+        return "<Player %s>" % (self)
+        
+    def __repr__(self):
+        return "%s [%s]" % (self.nickname, self.uuid)
         
     def clean(self):
         _self = copy(self)
@@ -113,13 +121,23 @@ class Event(Main):
         self.type = _type
         self.__dict__.update(args)
         
+    def typename(self):
+        return list(Event.__dict__.keys())[list(Event.__dict__.values()).index(self.type)]
+        
+    def __repr__(self):
+        return "<Event:%s %s>" % (self.typename(), [i for k, i in self.__dict__.items() if k != "type"])
+        
     def __iter__(self):
         print(self.__dict__.keys())
         return (getattr(self, x) for x in self.__dict__.keys() if x != "type")
  
         
 class Hello:
-    AVAILABLE_MSG = ["Bonjour %s!", "Hello %s!", "Guten tage %s!"]
+    AVAILABLE_MSG = ["Bonjour %s!", 
+                     "Hello %s!", 
+                     "你好 %s!", 
+                     "%s مرحبا!", 
+                     "Guten tage %s!"]
     
     @classmethod
     def generate(cls, nickname):
