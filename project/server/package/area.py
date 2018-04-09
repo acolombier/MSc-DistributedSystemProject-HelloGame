@@ -264,13 +264,13 @@ class Area:
                         print ("right")
                     position_x = data.player.position % self.gameinfo.sxarea
                     position_y = data.player.position // self.gameinfo.sxarea
-                    if position_x == 0 and position_y*(self.gameinfo.syarea-1) + self.gameinfo.sxarea-1  in self.players.keys():
+                    if position_x == 0 and position_y*(self.gameinfo.sxarea) + self.gameinfo.sxarea-1  in self.players.keys():
                         print ("Me sent "+ str(self.id))
                         self.dispatcher(exchange='broadcast',
                                         routing_key='',
                                         body=json_encode(
                                         model.Event(model.Event.PLAYER_SAYS, 
-                                                    player=self.players[position_y*(self.gameinfo.syarea-1) + self.gameinfo.sxarea-1], msg=model.Hello.generate(data.player.nickname))))
+                                                    player=self.players[position_y*(self.gameinfo.sxarea) + self.gameinfo.sxarea-1], msg=model.Hello.generate(data.player.nickname))))
 
                     # for x in range(self.gameinfo.sxarea):
                     #     if (y*self.gameinfo.sxarea + x) in self.players.keys():
