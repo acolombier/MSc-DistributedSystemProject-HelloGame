@@ -47,9 +47,12 @@ class Controller(QApplication):
             
             self.corethread = QThread()
             self.core.moveToThread(self.corethread)
+            
             self.corethread.finished.connect(self.core.deleteLater)
             self.corethread.started.connect(self.core.run)
+            
             self.core.finished.connect(self.corethread.quit)
+            
             self.corethread.start()
             
             self.core.register()
@@ -58,8 +61,6 @@ class Controller(QApplication):
             self.startdialog.error(str(e))
             
     def close(self):
-        if self.core is not None:
-            self.core.wait()
         self.exit(0)
         
             
@@ -70,7 +71,7 @@ class Controller(QApplication):
             
             self.gm.requestedPosition.connect(self.core.movePlayer)
             self.gm.closed.connect(self.core.stop)
-            self.gm.closed.connect(self.close)
+            self.core.finished.connect(self.close)
             
             self.gm.show()
         elif event.type == model.Event.GAME_INFO:  
