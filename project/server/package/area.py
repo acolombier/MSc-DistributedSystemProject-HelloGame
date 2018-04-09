@@ -151,12 +151,15 @@ class Area:
                                     body=json_encode(data))
             ch.basic_ack(delivery_tag = method.delivery_tag)
         elif isinstance(data, model.JoinRequest):
-            if len(self.players) == self.gameinfo.cellsbyarea():
+            freecell = [i for i in range(0, self.gameinfo.cellsbyarea()) if i not in self.players.keys()]
+            if len(freecell) == 0:
                 print("Error: the area is full")
-                ch.basic_nack(delivery_tag = method.delivery_tag)
+                ch.basic_reject(delivery_tag = method.delivery_tag)
                 return
-                
-            c = choice([i for i in range(0, self.gameinfo.cellsbyarea() - 1) if i not in self.players.keys()])
+            elif len(freecell) == 1:
+                c = freecell[0]
+            else:
+                c = choice(freecell)
             
             data.player.area = self.id
             data.player.position = c

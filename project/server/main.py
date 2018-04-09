@@ -68,7 +68,6 @@ class Dispatcher(Thread):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Hello Game server launcher.')
     
-    parser.add_argument('--single-node', dest='node_id', default=-1, type=int, nargs='?', help='Launch a single node with the given id')
     parser.add_argument('rmq_host', type=str, default='localhost',
                 help='Server name that run RabbitMQ')
     parser.add_argument('row', type=int, default=2,
@@ -79,10 +78,10 @@ if __name__ == "__main__":
                 help='Width of an area')
     parser.add_argument('area_height', type=int, default=4,
                 help='Height of an area')
+    parser.add_argument('--nodes', dest='node_id', default=[], type=int, nargs='*', help='Launch only given nodes with their id')
+    
     args = parser.parse_args()
     
-    
-
     connection = pika.BlockingConnection(pika.ConnectionParameters(args.rmq_host))
     channel = connection.channel()
     
@@ -90,10 +89,8 @@ if __name__ == "__main__":
     
     dispatcher = Dispatcher(channel)
     
-    if args.node_id == -1:
-        area = [Area(i, gameinfo, channel, dispatcher) for i in range(0, args.row * args.col)]
-    else:
-        area = [Area(args.node_id, gameinfo, channel, dispatcher)]
+    area = [Area(i, gameinfo, channel, dispatcher) for i in (range(0, args.row * args.col) if len(args.node_id) == 0 else args.node_id)]
+
         
     dispatcher.start()
     dispatcher.consume(connection)
