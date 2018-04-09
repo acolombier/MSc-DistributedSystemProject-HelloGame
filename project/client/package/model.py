@@ -142,7 +142,7 @@ class Hello:
                      "হ্যালো %s!", 
                      "Здравейте %s!", 
                      "Привет %s!", 
-                     "%s مرحبا!", 
+                     "!%s مرحبا", 
                      "Guten tage %s!"]
     
     @classmethod
@@ -154,6 +154,7 @@ class Letsgo:
     AVAILABLE_MSG = ["C'est parti!", 
                      "Let's go!",
                      "Пойдемте!",
+                     "العب يلا!",
                      "Хайде да отидем!",
                      "এটা চলে গেছে!",
                      "Los geht's!"]

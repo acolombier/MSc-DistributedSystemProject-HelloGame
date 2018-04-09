@@ -32,7 +32,7 @@ class Controller(QApplication):
         
     def launchGame(self, nickname, server):
         if len(nickname) == 0:
-            nickname = choice(["alice", "bob", "charles"])
+            nickname = choice(["Alice", "Bob", "Charles", "Daniel", "Emily", "Fabian", "Gerda", "Hannah"])
         if len(server) == 0:
             server = "localhost"
             
