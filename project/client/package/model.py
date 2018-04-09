@@ -139,6 +139,9 @@ class Hello:
     AVAILABLE_MSG = ["Bonjour %s!", 
                      "Hello %s!", 
                      "你好 %s!", 
+                     "হ্যালো %s!", 
+                     "Здравейте %s!", 
+                     "Привет %s!", 
                      "%s مرحبا!", 
                      "Guten tage %s!"]
     
@@ -148,7 +151,12 @@ class Hello:
  
         
 class Letsgo:
-    AVAILABLE_MSG = ["C'est parti!", "Let's go!", "Los geht's!"]
+    AVAILABLE_MSG = ["C'est parti!", 
+                     "Let's go!",
+                     "Пойдемте!",
+                     "Хайде да отидем!",
+                     "এটা চলে গেছে!",
+                     "Los geht's!"]
     
     @classmethod
     def generate(cls):

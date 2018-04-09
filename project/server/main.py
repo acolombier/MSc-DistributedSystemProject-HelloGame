@@ -68,7 +68,7 @@ class Dispatcher(Thread):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Hello Game server launcher.')
     
-    parser.add_argument('rmq_host', type=str, default='localhost',
+    parser.add_argument('rmq_host', type=str, default='localhost', nargs='?',
                 help='Server name that run RabbitMQ')
     parser.add_argument('row', type=int, default=2,
                 help='Number of Area on a row')
