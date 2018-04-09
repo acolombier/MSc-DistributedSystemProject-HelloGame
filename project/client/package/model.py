@@ -148,7 +148,7 @@ class Hello:
  
         
 class Letsgo:
-    AVAILABLE_MSG = ["C'est parti!", "Let's go!", "Los geht's!"]
+    AVAILABLE_MSG = ["C'est parti!", "Let's go!", "Los geht's!", "العب يلا"]
     
     @classmethod
     def generate(cls):
