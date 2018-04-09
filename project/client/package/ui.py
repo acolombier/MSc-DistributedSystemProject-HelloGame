@@ -40,9 +40,9 @@ class Area(QWidget):
         p = QPainter(self)
         
         p.setPen(self.color)
-        for i in range(0, self.nrow+1):
-            p.drawLine((self.width() / self.ncol) * i, 0, (self.width() / self.ncol) * i, self.height())   
         for i in range(0, self.ncol+1):
+            p.drawLine((self.width() / self.ncol) * i, 0, (self.width() / self.ncol) * i, self.height())   
+        for i in range(0, self.nrow+1):
             p.drawLine(0, (self.height() / self.nrow) * i, self.width(), (self.height() / self.nrow) * i)      
         p.end()
         
@@ -128,6 +128,7 @@ class Player(QWidget):
         self.message = None
         self.textbubble = None
         self.posAnimation = None
+        self.says_timer = None
         
     def moveTo(self, area, position):
         self.area = area
@@ -184,12 +185,14 @@ class Player(QWidget):
             self.textbubble.hide()
             del self.textbubble
             self.textbubble = None
+            if self.says_timer is not None:
+                self.says_timer.cancel()
             
         if self.message:
             self.textbubble = TextBubble(self, self.message)
             
         self.update()
-        QTimer.singleShot(3000, lambda: self.animateSays(None))
+        self.says_timer = QTimer.singleShot(3000, lambda: self.animateSays(None))
         
 class TextBubble(QWidget):
     def __init__(self, player, text):

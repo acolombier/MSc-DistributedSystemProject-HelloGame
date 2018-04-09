@@ -154,6 +154,7 @@ class GameCore(QThread):
         
         self._send(model.Event(model.Event.QUIT, player=self.player))
         self.connection.close()
+        self.finished.emit()
         
         
       
@@ -217,6 +218,7 @@ class GameCore(QThread):
                                        routing_key='main_queue' if not self.player.is_on_board() or _type == GameCore.BROADCAST 
                                             else "node_area_%d" % self.player.area,
                                        body=json_encode(data))
+            # ~ print("sending %s" % data)
         finally:
             self.rmq.release()
             
@@ -252,5 +254,4 @@ class GameCore(QThread):
                 finally:
                     self.rmq.release()
                 QCoreApplication.instance().processEvents()
-        self.finished.emit()
 
