@@ -206,8 +206,9 @@ class Area:
                 and self.players[data.player.position] == data.player:
                 self.players[data.player.position].last_activity = time()    
             elif data.type == model.Event.PLAYER_MOVE:
-                # if (self.id == 3):
-                #     print (str(data.player.area) + "    " + str(self.id))   
+                if data.player in self.players.values() and data.area != self.id:
+                    del self.players[list(self.players.keys())[list(self.players.values()).index(data.player)]]      
+                    
                 if data.player.area == self.id:
                     if (data.player.position - 1) in self.players.keys():                        
                         self.dispatcher(exchange='broadcast',
@@ -235,37 +236,49 @@ class Area:
                                         model.Event(model.Event.PLAYER_SAYS, 
                                                     player=self.players[data.player.position + self.gameinfo.sxarea], msg=model.Hello.generate(data.player.nickname))))
                     
-                elif data.player.area + self.gameinfo.nxarea == self.id:
+                elif data.player.area + self.gameinfo.nyarea == self.id:
+                    if self.id == 0:
+                        print ("upper")
                     position_x = data.player.position % self.gameinfo.sxarea
                     position_y = data.player.position // self.gameinfo.sxarea
                     if position_y ==  self.gameinfo.syarea -1 and  position_x in self.players.keys():
+                        print ("Me sent "+ str(self.id))
                         self.dispatcher(exchange='broadcast',
                                     routing_key='',
                                     body=json_encode(
                                     model.Event(model.Event.PLAYER_SAYS, 
                                                     player=self.players[position_x], msg=model.Hello.generate(data.player.nickname))))
-                elif data.player.area - self.gameinfo.nxarea == self.id:
+                elif data.player.area - self.gameinfo.nyarea == self.id:
+                    if self.id == 0:
+                        print ("lower")
                     position_x = data.player.position % self.gameinfo.sxarea
                     position_y = data.player.position // self.gameinfo.sxarea
                     if position_y == 0 and ((self.gameinfo.syarea - 1) * self.gameinfo.syarea) + position_x in self.players.keys():
+                            print ("Me sent "+ str(self.id))
                             self.dispatcher(exchange='broadcast',
                                         routing_key='',
                                         body=json_encode(
                                         model.Event(model.Event.PLAYER_SAYS, 
                                                     player=self.players[((self.gameinfo.syarea - 1) * self.gameinfo.syarea) + position_x], msg=model.Hello.generate(data.player.nickname))))
-                elif data.player.area + 1 == self.id and (self.id) % self.gameinfo.nxarea != 0:
+                elif data.player.area + 1 == self.id and (self.id) % self.gameinfo.nyarea != 0:
+                    if self.id == 0:
+                        print ("left")
                     position_x = data.player.position % self.gameinfo.sxarea
                     position_y = data.player.position // self.gameinfo.sxarea
                     if position_x == self.gameinfo.syarea-1 and position_y* self.gameinfo.syarea in self.players.keys():
+                        print ("Me sent "+ str(self.id))
                         self.dispatcher(exchange='broadcast',
                                         routing_key='',
                                         body=json_encode(
                                         model.Event(model.Event.PLAYER_SAYS, 
                                                     player=self.players[position_y* self.gameinfo.syarea], msg=model.Hello.generate(data.player.nickname))))
-                elif data.player.area - 1 == self.id and (self.id + 1) % self.gameinfo.nxarea != 0:
+                elif data.player.area - 1 == self.id and (self.id + 1) % self.gameinfo.nyarea != 0:
+                    if self.id == 0:
+                        print ("right")
                     position_x = data.player.position % self.gameinfo.sxarea
                     position_y = data.player.position // self.gameinfo.sxarea
                     if position_x == 0 and position_y*self.gameinfo.syarea + self.gameinfo.sxarea-1  in self.players.keys():
+                        print ("Me sent "+ str(self.id))
                         self.dispatcher(exchange='broadcast',
                                         routing_key='',
                                         body=json_encode(
@@ -282,8 +295,7 @@ class Area:
                                                     # player=self.players[y*self.gameinfo.sxarea + x], msg=model.Hello.generate(data.player.nickname))))
                     # ~ print("%d ?%d: x neightboor " % (self.id, data.player.area), abs(data.player.area - self.id) == 1 and int(data.player.area / self.gameinfo.nxarea) == int(self.id / self.gameinfo.nxarea))
                     # ~ print("%d ?%d: y neightboor " % (self.id, data.player.area), abs(data.player.area - self.id) == self.gameinfo.nxarea and data.player.area % self.gameinfo.nxarea == self.id % self.gameinfo.nxarea)                 
-                if data.player in self.players.values() and data.area != self.id:
-                    del self.players[list(self.players.keys())[list(self.players.values()).index(data.player)]]      
+                
             elif data.type == model.Event.PLAYER_JOIN:
                 self.dispatcher(exchange='broadcast',
                                 routing_key='',

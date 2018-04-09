@@ -118,7 +118,8 @@ class GameCore(QThread):
         self.callback_queue = reply_to_queue.method.queue
         self.channel.basic_consume(self.on_response, no_ack=True,
                                    queue=self.callback_queue)
-                                   
+
+                                           
         ### Main Broadcast Channel
         self.channel.basic_consume(self.on_broadcast,
                                    queue=broadcast_queue_name)
