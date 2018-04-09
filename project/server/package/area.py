@@ -225,7 +225,7 @@ class Area:
                                         model.Event(model.Event.PLAYER_SAYS, 
                                                     player=self.players[data.player.position + self.gameinfo.sxarea], msg=model.Hello.generate(data.player.nickname))))
                     
-                elif data.player.area + self.gameinfo.nyarea == self.id:
+                elif data.player.area + self.gameinfo.nxarea == self.id:
                     if self.id == 0:
                         print ("upper")
                     position_x = data.player.position % self.gameinfo.sxarea
@@ -237,42 +237,40 @@ class Area:
                                     body=json_encode(
                                     model.Event(model.Event.PLAYER_SAYS, 
                                                     player=self.players[position_x], msg=model.Hello.generate(data.player.nickname))))
-                elif data.player.area - self.gameinfo.nyarea == self.id:
+                elif data.player.area - self.gameinfo.nxarea == self.id:
                     if self.id == 0:
                         print ("lower")
                     position_x = data.player.position % self.gameinfo.sxarea
                     position_y = data.player.position // self.gameinfo.sxarea
-                    if position_y == 0 and ((self.gameinfo.syarea - 1) * self.gameinfo.syarea) + position_x in self.players.keys():
+                    if position_y == 0 and ((self.gameinfo.syarea - 1) * self.gameinfo.sxarea) + position_x in self.players.keys():
                             print ("Me sent "+ str(self.id))
                             self.dispatcher(exchange='broadcast',
                                         routing_key='',
                                         body=json_encode(
                                         model.Event(model.Event.PLAYER_SAYS, 
-                                                    player=self.players[((self.gameinfo.syarea - 1) * self.gameinfo.syarea) + position_x], msg=model.Hello.generate(data.player.nickname))))
-                elif data.player.area + 1 == self.id and (self.id) % self.gameinfo.nyarea != 0:
-                    if self.id == 0:
-                        print ("left")
+                                                    player=self.players[((self.gameinfo.syarea - 1) * self.gameinfo.sxarea) + position_x], msg=model.Hello.generate(data.player.nickname))))
+                elif data.player.area + 1 == self.id and (self.id) % self.gameinfo.nxarea != 0:
                     position_x = data.player.position % self.gameinfo.sxarea
                     position_y = data.player.position // self.gameinfo.sxarea
-                    if position_x == self.gameinfo.syarea-1 and position_y* self.gameinfo.syarea in self.players.keys():
+                    if position_x == self.gameinfo.sxarea-1 and position_y* self.gameinfo.sxarea in self.players.keys():
                         print ("Me sent "+ str(self.id))
                         self.dispatcher(exchange='broadcast',
                                         routing_key='',
                                         body=json_encode(
                                         model.Event(model.Event.PLAYER_SAYS, 
-                                                    player=self.players[position_y* self.gameinfo.syarea], msg=model.Hello.generate(data.player.nickname))))
-                elif data.player.area - 1 == self.id and (self.id + 1) % self.gameinfo.nyarea != 0:
+                                                    player=self.players[position_y* self.gameinfo.sxarea], msg=model.Hello.generate(data.player.nickname))))
+                elif data.player.area - 1 == self.id and (self.id + 1) % self.gameinfo.nxarea != 0:
                     if self.id == 0:
                         print ("right")
                     position_x = data.player.position % self.gameinfo.sxarea
                     position_y = data.player.position // self.gameinfo.sxarea
-                    if position_x == 0 and position_y*self.gameinfo.syarea + self.gameinfo.sxarea-1  in self.players.keys():
+                    if position_x == 0 and position_y*(self.gameinfo.syarea-1) + self.gameinfo.sxarea-1  in self.players.keys():
                         print ("Me sent "+ str(self.id))
                         self.dispatcher(exchange='broadcast',
                                         routing_key='',
                                         body=json_encode(
                                         model.Event(model.Event.PLAYER_SAYS, 
-                                                    player=self.players[position_y*self.gameinfo.syarea + self.gameinfo.sxarea-1], msg=model.Hello.generate(data.player.nickname))))
+                                                    player=self.players[position_y*(self.gameinfo.syarea-1) + self.gameinfo.sxarea-1], msg=model.Hello.generate(data.player.nickname))))
 
                     # for x in range(self.gameinfo.sxarea):
                     #     if (y*self.gameinfo.sxarea + x) in self.players.keys():
