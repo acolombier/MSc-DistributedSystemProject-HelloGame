@@ -16,14 +16,15 @@ class Controller(QApplication):
 
     def __init__(self, *args):
         super().__init__(*args)
+        self.gm = None
+        self.core = None
+        
+        self.setQuitOnLastWindowClosed(False)
         
         self.startdialog = ui.GameStartDialog()
-        self.gm = None
+        self.startdialog.closed.connect(self.close)
         
         self.startdialog.submited.connect(self.launchGame)
-        if len(args) == 3:
-            self.startdialog.ui.nicknameValue.text(args[2])
-            self.startdialog.ui.serverValue.text(args[1])
         
     def run(self):
         self.startdialog.show()
@@ -37,6 +38,9 @@ class Controller(QApplication):
             
         try:
             self.core = GameCore(nickname, server)
+            
+            self.startdialog.closed.connect(self.core.stop)
+            
             self.core.statusChanged.connect(self.startdialog.status)
             self.core.errorEncounted.connect(self.startdialog.error)
             self.core.eventReceived.connect(self.onEvent)
@@ -53,6 +57,12 @@ class Controller(QApplication):
         except GameStartException as e:
             self.startdialog.error(str(e))
             
+    def close(self):
+        if self.core is not None:
+            self.core.wait()
+        self.exit(0)
+        
+            
     def onEvent(self, event):
         if event.type == model.Event.GAME_READY:                        
             self.startdialog.hide()
@@ -60,6 +70,7 @@ class Controller(QApplication):
             
             self.gm.requestedPosition.connect(self.core.movePlayer)
             self.gm.closed.connect(self.core.stop)
+            self.gm.closed.connect(self.close)
             
             self.gm.show()
         elif event.type == model.Event.GAME_INFO:  
@@ -78,6 +89,8 @@ class Controller(QApplication):
         elif event.type == model.Event.ERROR:  
             if self.gm is not None and self.gm.isVisible():
                 QMessageBox.critical(self.gm, "Error", event.msg)
+                if hasattr(event, "critical"):
+                    self.gm.close()
             else:
                 self.startdialog.error(event.msg)
         elif event.type != model.Event.KEEP_ALIVE:

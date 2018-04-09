@@ -33,6 +33,9 @@ class Game(Main):
         ret = copy(self)
         ret.player = player
         return ret
+        
+    def cellsbyarea(self):
+        return self.sxarea * self.syarea
 
 
 class Player(Main):
@@ -43,8 +46,8 @@ class Player(Main):
     
     AVAILABLE_COLOR = [3,  #	White (#ffffff)
                        7,  #	Red (#ff0000)
-                       8,  #	Green (#00ff00)
-                       9]  #	Blue (#0000ff)
+                       8]  #	Green (#00ff00)
+                       
     
     def __init__(self, nickname=None):
         self.nickname = nickname

@@ -13,12 +13,12 @@ class Area(QWidget):
     
     def __init__(self, width=4, height=4, color=13, *args):
         super().__init__(*args)
-        self.nrow = width
-        self.ncol = height
+        self.nrow = height
+        self.ncol = width
         
         self.color = Qt.GlobalColor(color)
     
-        self.setMinimumSize(40 * self.nrow, 40 * self.ncol)
+        self.setMinimumSize(40 * self.ncol, 40 * self.nrow)
         
     def cellsize(self):
         return QSize(self.width() / self.ncol, self.height() / self.nrow)
@@ -26,7 +26,7 @@ class Area(QWidget):
     def cellpos(self, cellid):
         x_size, y_size = self.width() / self.ncol, self.height() / self.nrow
         
-        return self.pos() + QPoint((cellid % self.ncol) * x_size, int(cellid / self.nrow) * y_size)
+        return self.pos() + QPoint((cellid % self.ncol) * x_size, int(cellid / self.ncol) * y_size)
         
     def mousePressEvent(self, event):
         x_size, y_size = self.width() / self.ncol, self.height() / self.nrow
@@ -41,9 +41,9 @@ class Area(QWidget):
         
         p.setPen(self.color)
         for i in range(0, self.nrow+1):
-            p.drawLine((self.width() / self.nrow) * i, 0, (self.width() / self.nrow) * i, self.height())   
+            p.drawLine((self.width() / self.ncol) * i, 0, (self.width() / self.ncol) * i, self.height())   
         for i in range(0, self.ncol+1):
-            p.drawLine(0, (self.height() / self.ncol) * i, self.width(), (self.height() / self.ncol) * i)      
+            p.drawLine(0, (self.height() / self.nrow) * i, self.width(), (self.height() / self.nrow) * i)      
         p.end()
         
         
@@ -62,11 +62,10 @@ class Board(QWidget):
         
         self.players = {}
         self.area = []
-        print(area_color)
         
-        for w in range(0, row):
-            for h  in range(0, col):
-                self.area.append(Area(area_width, area_height, area_color[h * row + w], **kwargs))
+        for w in range(0, col):
+            for h  in range(0, row):
+                self.area.append(Area(area_width, area_height, area_color[h * col + w], **kwargs))
                 self.layout().addWidget(self.area[-1], w, h)
                 self.area[-1].requestedPosition.connect((lambda a: (lambda p: self.moveTo(a, p)))(self.area[-1]))
                 
@@ -134,7 +133,8 @@ class Player(QWidget):
         self.area = area
         self.position = position
         
-        self.move(self.parent().area[self.area].cellpos(self.position))
+        self.move(self.parent().area[self.area].cellpos(self.position))    
+        self.resize(self.parent().area[self.area].cellsize())
         self.show()
         self.raise_()
         
@@ -155,7 +155,7 @@ class Player(QWidget):
         p.drawEllipse(3 * (self.width() / 4) - 5, self.width() / 4 - 5, 10, 10)
         
         if self.textbubble:
-            self.textbubble.eye((self.x() + self.width() / 4 - 5, self.y() + self.width() / 4 - 5))
+            self.textbubble.update()
               
         p.end()
         
@@ -186,32 +186,21 @@ class Player(QWidget):
             self.textbubble = None
             
         if self.message:
-            self.textbubble = TextBubble(self.message)
-            self.textbubble.setParent(self.parent())
-            self.textbubble.show()
-            self.textbubble.raise_()
+            self.textbubble = TextBubble(self, self.message)
             
         self.update()
         QTimer.singleShot(3000, lambda: self.animateSays(None))
         
 class TextBubble(QWidget):
-    def __init__(self, text):
+    def __init__(self, player, text):
         super().__init__()
+        self.player = player
         self.text = text
-        self.tracking = (0, 0)
-    
-    # ~ def resizeEvent(self, e):
-        # ~ xratio, yratio = e.oldSize().width() / e.size().width(), e.oldSize().height() / e.size().height()
         
-        # ~ if xratio == yratio == 1:
-            # ~ return
-        
-        # ~ self.move(self.pos().x() * xratio, self.pos().y() * yratio)        
-        # ~ self.resize(self.width() * xratio, self.height() * yratio)
-        
-    def eye(self, tracking_point):
-        self.tracking = tracking_point
-        self.update()
+        self.setParent(player.parent())
+        self.show()
+        self.raise_()
+        self.resize(10, 10)
         
     def paintEvent(self, event):
         p = QPainter(self)
@@ -223,11 +212,19 @@ class TextBubble(QWidget):
         p.setFont(font)
         
         p.setPen(Qt.black)
-        p.setBrush(Qt.white)
+        p.setBrush(self.player.color)
         txt_s = p.fontMetrics().width(self.text) + 4, p.fontMetrics().height() + 4
         
-        if self.pos() != QPoint(self.tracking[0] - txt_s[0], self.tracking[1] - txt_s[1]):
-            self.move(self.tracking[0] - txt_s[0], self.tracking[1] - txt_s[1])
+        (self.x() + self.width() / 4 - 5, self.y() + self.width() / 4 - 5)
+        
+        xpos = (self.player.x() + self.player.width() / 4 - 5) - txt_s[0]
+        if xpos < 0: xpos = (self.player.x() + 3 * (self.player.width() / 4) + 5)
+        
+        ypos = (self.player.y() + self.height() / 4 - 5) - txt_s[1] + 4
+        if ypos < 0: ypos = (self.player.y() + self.height() / 4 - 5) + txt_s[1] + 4
+        
+        if self.pos() != QPoint(xpos, ypos) or self.size() != QSize(txt_s[0] + 4, txt_s[1] + 4):
+            self.move(xpos, ypos)
             self.resize(txt_s[0] + 4, txt_s[1] + 4)
             p.end()
             self.update()
@@ -264,6 +261,7 @@ class GameWindow(QMainWindow):
         
 class GameStartDialog(QDialog):
     submited = pyqtSignal(str, str)
+    closed = pyqtSignal()
     
     def __init__(self, *args):
         super().__init__(*args)
@@ -296,4 +294,7 @@ class GameStartDialog(QDialog):
         
     def status(self, msg):
         self.ui.errorMsgText.setText("<i style='color: grey;'>%s</i>" % msg)
+        
+    def closeEvent(self, event):
+        self.closed.emit()
     

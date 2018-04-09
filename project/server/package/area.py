@@ -151,26 +151,12 @@ class Area:
                                     body=json_encode(data))
             ch.basic_ack(delivery_tag = method.delivery_tag)
         elif isinstance(data, model.JoinRequest):
-            # TODO : do we need to send that the join request has been rejected?
-            # Reject Join request when area is full 
-            if len(self.players) == 16:
+            if len(self.players) == self.gameinfo.cellsbyarea():
                 print("Error: the area is full")
                 ch.basic_nack(delivery_tag = method.delivery_tag)
                 return
                 
-            # TODO : This is very expensive, if you have 15 players then it might loop for long time
-            # Fair point!
-             
-             
-            # c = randint(0, 15)
-            # while c in self.players.keys():
-            #     c = randint(0, 15)
-            
-            # I propose to keep a list of free cells
-            # I would prefere no to keep any data as 'self' that might lead to corruption regarding the multi threading
-            
-            # Here is my proposal
-            c = choice([i for i in range(0, 15) if i not in self.players.keys()])
+            c = choice([i for i in range(0, self.gameinfo.cellsbyarea() - 1) if i not in self.players.keys()])
             
             data.player.area = self.id
             data.player.position = c
@@ -180,7 +166,7 @@ class Area:
 
             print("Accepting new player '%s' at pos %s" % (data.player, c))
             
-            # TODO : reply to prodedure call right? 
+            # reply to prodedure call
             self.dispatcher(exchange='',
                             routing_key=props.reply_to,
                             body=json_encode(self.gameinfo.playercopy(data.player)))

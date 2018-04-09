@@ -34,9 +34,44 @@ class DispatchTask:
         
     def get(self):
         if self.ready is None:
-            self.ready = Event()
-        self.ready.wait()
+            self.ready = Event()        
+        self.ready.wait(timeout)
         return self.results
+        
+
+"""
+The dispatch return the pending task (usefull ta asynchronously get the result for RPC call). use the method get from the DispatcherTask to do so
+
+You can pass it even straight away, and the method will build up the correct DispatcherTask
+I.e: core.dispatcher(model.Event(model.Event.QUIT)) or core.dispatcher(model.Event(<EVENT>), GameCore.BROADCAST)
+"""
+class Dispatcher(Thread):
+    def __init__(self, context): 
+        super().__init__()
+        self.daemon = True     
+        
+        self.context = context
+        self.isrunning = True
+        self._pending_requests = Queue()
+        
+    def __call__(self, callhandler, *args):
+        if isinstance(callhandler, model.Event):
+            task = DispatchTask(GameCore._send, callhandler, *args)
+        else:
+            task = DispatchTask(callhandler, *args)
+        self._pending_requests.put(task)
+        return task
+        
+    def stop(self):
+        self.isrunning = False
+        self._pending_requests.put(None)
+        self.join()
+    
+    def run(self):
+        while self.isrunning:
+            task = self._pending_requests.get()
+            if isinstance(task, DispatchTask):
+                task(self.context)
     
 class GameCore(QThread):
     eventReceived = pyqtSignal(object)
@@ -53,8 +88,6 @@ class GameCore(QThread):
         self.server, self.player = server, Player(nickname)
         self.isrunning = True
         
-        self._pending_requests = Queue()
-        
         self.isready = Event()
         self.isregistered = Event()
         
@@ -64,31 +97,11 @@ class GameCore(QThread):
         self.keep_alive_timer.timeout.connect(self.keep_alive)
         self.keep_alive_timer.start(2000)
         
-        self.dispatcher_thread = Thread(target=self.dispatcher)
-        self.dispatcher_thread.start()
+        self.dispatcher = Dispatcher(self)
+        self.dispatcher.start()
         
         print ("Initialising a game on %s with the nickname '%s'" % (server, nickname))
         
-    """
-    The dispatch return the pending task (usefull ta asynchronously get the result for RPC call). use the method get from the DispatcherTask to do so
-    
-    You can pass it even straight away, and the method will build up the correct DispatcherTask
-    I.e: core.dispatch(model.Event(model.Event.QUIT)) or core.dispatch(model.Event(<EVENT>), GameCore.BROADCAST)
-    """
-    def dispatch(self, callhandler, *args):
-        if isinstance(callhandler, model.Event):
-            task = DispatchTask(GameCore._send, callhandler, *args)
-        else:
-            task = DispatchTask(callhandler, *args)
-        self._pending_requests.put(task)
-        return task
-        
-    def dispatcher(self):
-        while self.isrunning:
-            task = self._pending_requests.get()
-            if task is not None:
-                task(self)
-      
     def init(self):
         
         self.statusChanged.emit("Connection to server...")
@@ -132,16 +145,16 @@ class GameCore(QThread):
     
     def keep_alive(self):    
         if self.player.is_on_board():
-            self.dispatch(model.Event(model.Event.KEEP_ALIVE, player=self.player))
+            self.dispatcher(model.Event(model.Event.KEEP_ALIVE, player=self.player))
         
     def stop(self):
         self.keep_alive_timer.stop()
-        if self.player.is_on_board():
-            self.dispatch(model.Event(model.Event.QUIT, player=self.player))
         self.isrunning = False
-        self._pending_requests.put(None)
-        self.dispatcher_thread.join()
+        self.dispatcher.stop()
+        
+        self._send(model.Event(model.Event.QUIT, player=self.player))
         self.connection.close()
+        
         
       
     #################################
@@ -149,7 +162,7 @@ class GameCore(QThread):
     #################################
     
     def register(self):
-        self.dispatch(GameCore._register)
+        self.dispatcher(GameCore._register)
         
     def _register(self):
         try:
@@ -166,7 +179,7 @@ class GameCore(QThread):
             self.eventReceived.emit(model.Event(model.Event.ERROR, msg="Game server couldn't be reached."))
         
     def movePlayer(self, area, pos):
-        self.dispatch(GameCore._movePlayer, area, pos)
+        self.dispatcher(GameCore._movePlayer, area, pos)
         
     def _movePlayer(self, area, pos):
         try:
@@ -176,7 +189,7 @@ class GameCore(QThread):
             else:
                 self.player.area, self.player.position = reply.player.area, reply.player.position
         except TiemoutException:
-            self.eventReceived.emit(model.Event(model.Event.ERROR, msg="Game server connexion is lost."))
+            self.eventReceived.emit(model.Event(model.Event.ERROR, msg="Game server connexion is lost.", critical=True))
         
      
     #####################
@@ -193,8 +206,6 @@ class GameCore(QThread):
         if isinstance(data, model.Event):
             self.isregistered.wait()
             self.eventReceived.emit(data)  
-            # TODO : We should handel the receiption of SAY_HELLO_EVENT          
-            # It is done in the event receiver handler (see Controller::onEvent, main.py:68)
             
         ch.basic_ack(delivery_tag = method.delivery_tag)
         
@@ -205,7 +216,7 @@ class GameCore(QThread):
             self.channel.basic_publish(exchange='',
                                        routing_key='main_queue' if not self.player.is_on_board() or _type == GameCore.BROADCAST 
                                             else "node_area_%d" % self.player.area,
-                                       body=json_encode(model.Event(model.Event.KEEP_ALIVE, player=self.player)))
+                                       body=json_encode(data))
         finally:
             self.rmq.release()
             
