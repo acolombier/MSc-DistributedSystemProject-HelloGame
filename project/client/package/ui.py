@@ -146,7 +146,7 @@ class Player(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         
-        p.setPen(Qt.NoPen)
+        p.setPen(Qt.black)
         p.setBrush(self.color)
         p.drawEllipse(0, 0, self.width(), self.height()) 
         p.setBrush(Qt.black)
