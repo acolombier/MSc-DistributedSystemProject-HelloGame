@@ -10,7 +10,7 @@ from random import choice
 
 class Area:    
                     
-    AVAILABLE_COLOR = [13, #	Dark red (#800000)
+    AVAILABLE_COLOR = [#13, #	Dark red (#800000)
                        14, #	Dark green (#008000)
                        15, #	Dark blue (#000080)
                        10, #	Cyan (#00ffff)

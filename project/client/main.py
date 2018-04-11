@@ -6,11 +6,7 @@ import sys
 from threading import Thread,Event
 from random import choice
 
-### TODO ####
-# - Handle server disconnection
-# - Display text dynamically to make it fit in the window
-# - [BUG] Cannot close the game properly after one login failure
-# - [BUG] Quit signal is not send in time
+DEFAULT_SERVER = "localhost"
 
 class Controller(QApplication):
 
@@ -34,7 +30,7 @@ class Controller(QApplication):
         if len(nickname) == 0:
             nickname = choice(["Alice", "Bob", "Charles", "Daniel", "Emily", "Fabian", "Gerda", "Hannah"])
         if len(server) == 0:
-            server = "localhost"
+            server = DEFAULT_SERVER
             
         try:
             self.core = GameCore(nickname, server)
@@ -97,6 +93,9 @@ class Controller(QApplication):
         elif event.type != model.Event.KEEP_ALIVE:
             print("Unknown event:", event.__dict__)
                     
+
+if len(sys.argv) > 1:
+    DEFAULT_SERVER = sys.argv[1]
         
 c = Controller(sys.argv)
 c.run()

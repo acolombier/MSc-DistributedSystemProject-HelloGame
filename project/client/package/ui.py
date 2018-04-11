@@ -65,7 +65,7 @@ class Board(QWidget):
         
         for w in range(0, col):
             for h  in range(0, row):
-                self.area.append(Area(area_width, area_height, area_color[h * col + w], **kwargs))
+                self.area.append(Area(area_width, area_height, area_color[w * row + h], **kwargs))
                 self.layout().addWidget(self.area[-1], w, h)
                 self.area[-1].requestedPosition.connect((lambda a: (lambda p: self.moveTo(a, p)))(self.area[-1]))
                 
